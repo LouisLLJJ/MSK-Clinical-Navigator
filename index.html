@@ -13,10 +13,19 @@
       <p class="eyebrow">鑑別・評価支援 MVP</p>
       <h1>MSK Clinical Navigator</h1>
     </div>
-    <button id="openEditorButton" class="button button-secondary" type="button">データ編集</button>
+    <button id="openEditorButton" class="button button-secondary" type="button">候補編集</button>
   </header>
 
+  <nav class="app-nav" aria-label="主要ページ">
+    <button class="nav-button active" type="button" data-page="clinical">臨床推論</button>
+    <button class="nav-button" type="button" data-page="symptoms">症状・部位</button>
+    <button class="nav-button" type="button" data-page="anatomy">解剖</button>
+    <button class="nav-button" type="button" data-page="tests">検査</button>
+    <button class="nav-button" type="button" data-page="treatments">治療</button>
+  </nav>
+
   <main>
+    <section class="app-page active" data-page-panel="clinical">
     <section class="notice" aria-label="重要な注意">
       <strong>診断を確定するアプリではありません。</strong>
       <span>臨床推論の整理用です。急な麻痺、膀胱直腸障害、発熱、重大な外傷、安静時にも増悪する強い痛みなどがあれば、候補検索より先に緊急評価を検討してください。</span>
@@ -81,6 +90,43 @@
 
       <section id="detailPanel" class="panel detail-panel" aria-live="polite"></section>
     </div>
+    </section>
+
+    <section class="app-page" data-page-panel="symptoms">
+      <div class="directory-header panel">
+        <div><p class="step-label">CONNECTED DATA</p><h2>症状・部位</h2><p>部位と症状を編集すると、候補検索と関連度へ反映されます。</p></div>
+        <button class="button button-primary" type="button" data-add-entity="symptom">新規追加</button>
+      </div>
+      <div class="directory-controls"><input type="search" placeholder="症状・部位を検索" data-directory-search="symptoms"></div>
+      <div id="symptomsDirectory" class="directory-grid"></div>
+    </section>
+
+    <section class="app-page" data-page-panel="anatomy">
+      <div class="directory-header panel">
+        <div><p class="step-label">CONNECTED DATA</p><h2>関連解剖</h2><p>筋・関節・組織・神経と候補のつながりを一元管理します。</p></div>
+        <button class="button button-primary" type="button" data-add-entity="anatomy">新規追加</button>
+      </div>
+      <div class="directory-controls"><input type="search" placeholder="解剖を検索" data-directory-search="anatomy"></div>
+      <div id="anatomyDirectory" class="directory-grid"></div>
+    </section>
+
+    <section class="app-page" data-page-panel="tests">
+      <div class="directory-header panel">
+        <div><p class="step-label">CONNECTED DATA</p><h2>検査</h2><p>検査名・陽性所見・関連候補を編集できます。</p></div>
+        <button class="button button-primary" type="button" data-add-entity="test">新規追加</button>
+      </div>
+      <div class="directory-controls"><input type="search" placeholder="検査を検索" data-directory-search="tests"></div>
+      <div id="testsDirectory" class="directory-grid"></div>
+    </section>
+
+    <section class="app-page" data-page-panel="treatments">
+      <div class="directory-header panel">
+        <div><p class="step-label">CONNECTED DATA</p><h2>治療・セルフケア</h2><p>介入候補を編集すると、関連する全候補の表示が変わります。</p></div>
+        <button class="button button-primary" type="button" data-add-entity="treatment">新規追加</button>
+      </div>
+      <div class="directory-controls"><input type="search" placeholder="治療・セルフケアを検索" data-directory-search="treatments"></div>
+      <div id="treatmentsDirectory" class="directory-grid"></div>
+    </section>
   </main>
 
   <dialog id="editorDialog" class="editor-dialog">
@@ -126,6 +172,29 @@
       <label class="text-button file-label">JSONを読み込む<input id="importInput" type="file" accept="application/json"></label>
       <button id="restoreButton" class="text-button" type="button">初期データに戻す</button>
     </div>
+  </dialog>
+
+  <dialog id="entityDialog" class="editor-dialog entity-dialog">
+    <form method="dialog" class="dialog-header">
+      <div><p class="step-label">CONNECTED DATA</p><h2 id="entityDialogTitle">データ編集</h2></div>
+      <button class="icon-button" value="cancel" aria-label="閉じる">×</button>
+    </form>
+    <form id="entityForm" class="editor-form">
+      <input id="entityOriginalName" type="hidden">
+      <input id="entityOriginalSubtype" type="hidden">
+      <input id="entityKind" type="hidden">
+      <label>名前<input id="entityName" required></label>
+      <label id="entitySubtypeLabel">分類<select id="entitySubtype"></select></label>
+      <label id="entityDescriptionLabel">説明・陽性所見<textarea id="entityDescription" rows="4"></textarea></label>
+      <fieldset class="relation-fieldset">
+        <legend>関連する候補</legend>
+        <div id="entityRelations" class="relation-grid"></div>
+      </fieldset>
+      <div class="dialog-actions">
+        <button id="deleteEntityButton" class="button button-danger" type="button">削除</button>
+        <button class="button button-primary" type="submit">保存</button>
+      </div>
+    </form>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
