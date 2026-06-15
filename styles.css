@@ -33,6 +33,11 @@ button { touch-action: manipulation; }
   background: var(--brand);
   color: white;
 }
+.app-nav { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; overflow-x: auto; padding: 8px max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left)); background: #0d2b20; scrollbar-width: none; }
+.nav-button { flex: 0 0 auto; min-height: 40px; padding: 7px 13px; border: 0; border-radius: 999px; background: transparent; color: #c9dbd2; font-weight: 800; }
+.nav-button.active { background: white; color: var(--brand); }
+.app-page { display: none; }
+.app-page.active { display: block; }
 h1, h2, h3, p { margin-top: 0; }
 h1 { margin-bottom: 0; font-size: clamp(1.3rem, 4vw, 1.8rem); line-height: 1.2; }
 h2 { margin-bottom: 0; font-size: 1.25rem; }
@@ -108,6 +113,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(69, 126, 101
 .detail-section:last-child { border-bottom: 0; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 7px; }
 .tag { padding: 5px 9px; border-radius: 8px; background: var(--brand-soft); color: var(--brand); font-size: .78rem; font-weight: 700; }
+.link-tag { border: 0; cursor: pointer; text-align: left; }
 .anatomy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .anatomy-box { padding: 12px; border-radius: 10px; background: #f7f8f6; }
 .anatomy-box p { margin-bottom: 0; color: var(--muted); font-size: .82rem; }
@@ -129,6 +135,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(69, 126, 101
 .button-secondary { border: 1px solid currentColor; background: transparent; color: inherit; }
 .button-danger { background: #fae9e9; color: var(--danger); }
 .text-button { border: 0; background: transparent; color: #32694f; padding: 6px; font-weight: 800; cursor: pointer; }
+.inline-link { padding: 0; text-align: left; }
 .icon-button { width: 44px; height: 44px; border: 0; border-radius: 50%; background: #eef1ef; font-size: 1.5rem; }
 
 .editor-dialog { width: min(760px, calc(100% - 24px)); max-height: calc(100dvh - 24px); margin: auto; border: 0; border-radius: 18px; padding: 0; box-shadow: 0 24px 80px rgba(0,0,0,.28); }
@@ -143,6 +150,20 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(69, 126, 101
 .file-label input { display: none; }
 .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 10; transform: translate(-50%, 20px); padding: 10px 16px; border-radius: 999px; background: #17211d; color: white; opacity: 0; pointer-events: none; transition: .2s; }
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
+.directory-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 20px; }
+.directory-header p:last-child { margin: 5px 0 0; color: var(--muted); }
+.directory-controls { margin: 14px 0; }
+.directory-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.directory-card { display: grid; align-content: start; gap: 9px; min-height: 170px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: white; box-shadow: var(--shadow); }
+.directory-card h3 { margin: 0; }
+.directory-card p { margin: 0; color: var(--muted); font-size: .82rem; }
+.directory-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.directory-card .button { margin-top: auto; color: var(--brand); }
+.relation-fieldset { margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.relation-fieldset legend { padding: 0 6px; color: #334139; font-size: .83rem; font-weight: 800; }
+.relation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.relation-option { display: flex; grid-template-columns: auto 1fr; align-items: center; gap: 7px; min-height: 40px; padding: 7px; border-radius: 8px; background: #f7f8f6; }
+.relation-option input { width: 20px; min-height: 20px; }
 
 @media (max-width: 760px) {
   .app-header { align-items: flex-end; }
@@ -155,6 +176,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(69, 126, 101
   .anatomy-grid { grid-template-columns: 1fr; }
   .sfma-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .detail-panel { scroll-margin-top: 8px; }
+  .directory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 520px) {
@@ -164,4 +186,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(69, 126, 101
   .editor-toolbar .button { width: 100%; }
   .dialog-actions { position: sticky; bottom: 0; margin: 0 -18px -16px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: white; border-top: 1px solid var(--line); }
   .sfma-grid { grid-template-columns: 1fr; }
+  .directory-header { align-items: flex-start; flex-direction: column; }
+  .directory-header .button { width: 100%; }
+  .directory-grid, .relation-grid { grid-template-columns: 1fr; }
 }
