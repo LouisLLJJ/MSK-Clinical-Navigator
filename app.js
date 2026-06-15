@@ -1,0 +1,344 @@
+const STORAGE_KEY = "msk-clinical-navigator-data-v1";
+
+const seedData = [
+  {
+    id: "rotator-cuff-related-shoulder-pain",
+    name: "腱板関連肩痛",
+    summary: "肩峰下周囲の痛みを含む臨床像。単一組織の断定より、負荷に対する症状と機能をまとめて評価します。",
+    regions: ["肩", "上腕外側"],
+    movements: ["腕を上げる", "物を持ち上げる", "患側を下にして寝る", "背中に手を回す"],
+    keywords: ["夜間痛", "ペインフルアーク", "筋力低下", "オーバーヘッド"],
+    muscles: ["棘上筋", "棘下筋", "肩甲下筋", "小円筋", "三角筋"],
+    joints: ["肩甲上腕関節", "肩鎖関節", "肩甲胸郭機構"],
+    nerves: ["肩甲上神経", "腋窩神経"],
+    tests: [
+      { id: "painful-arc", name: "Painful arc", finding: "肩外転のおよそ中間域で痛みが増え、終末域で軽くなる" },
+      { id: "resisted-er", name: "外旋抵抗テスト", finding: "抵抗下外旋で疼痛または明らかな筋力低下" },
+      { id: "hawkins-kennedy", name: "Hawkins-Kennedy test", finding: "肩を屈曲・内旋方向へ動かした際に既知の肩痛が再現" }
+    ],
+    treatments: ["活動量と負荷の調整", "腱板・肩甲帯の段階的な筋力トレーニング", "可動域制限に応じた運動療法", "必要時は医療者による疼痛管理の相談"],
+    selfCare: ["痛みが長く残らない範囲で肩を動かす", "反復する頭上作業を一時的に分散する", "軽い外旋・挙上運動から徐々に負荷を上げる"],
+    cautions: ["急な外傷後に腕を上げられない、著明な筋力低下がある場合は早期評価", "胸痛、息切れ、発汗を伴う肩痛は緊急評価"]
+  },
+  {
+    id: "adhesive-capsulitis",
+    name: "凍結肩（肩関節周囲の拘縮）",
+    summary: "自動・他動の両方で多方向の可動域が制限され、とくに外旋制限が目立つ臨床像です。",
+    regions: ["肩"],
+    movements: ["腕を上げる", "背中に手を回す", "髪を結ぶ", "着替える"],
+    keywords: ["可動域制限", "夜間痛", "徐々に悪化", "外旋制限"],
+    muscles: ["腱板筋群", "三角筋"],
+    joints: ["肩甲上腕関節", "関節包"],
+    nerves: [],
+    tests: [
+      { id: "passive-er", name: "他動外旋可動域", finding: "健側と比べて他動外旋が明らかに制限" },
+      { id: "capsular-pattern", name: "多方向の他動可動域", finding: "外旋を中心に外転・内旋も制限される" }
+    ],
+    treatments: ["病期と刺激性に合わせた可動域運動", "疼痛教育と活動調整", "必要時は医師と注射などの選択肢を相談"],
+    selfCare: ["強く押し込まず、許容範囲で短時間の可動域運動", "日常動作を小分けにして痛みの蓄積を避ける"],
+    cautions: ["外傷、発熱、強い腫脹がある場合は別の原因を評価", "糖尿病などの併存症も医療者に共有"]
+  },
+  {
+    id: "cervical-radiculopathy",
+    name: "頸部神経根症の疑い",
+    summary: "頸部から上肢へ広がる痛み・しびれ・筋力低下を、神経学的所見と複数の誘発・軽減所見から評価します。",
+    regions: ["首", "肩甲骨周囲", "腕", "手"],
+    movements: ["首を反らす", "首を回す", "長く座る", "上を向く"],
+    keywords: ["しびれ", "放散痛", "握力低下", "感覚低下", "反射"],
+    muscles: ["頸部深層筋", "斜角筋", "上肢筋群"],
+    joints: ["頸椎椎間関節", "椎間孔"],
+    nerves: ["頸神経根 C5-C8", "正中神経", "橈骨神経", "尺骨神経"],
+    tests: [
+      { id: "spurling", name: "Spurling test", finding: "頸部伸展・回旋・圧迫で上肢の既知症状が再現" },
+      { id: "distraction", name: "Cervical distraction test", finding: "軽い頸椎牽引で上肢症状が軽減" },
+      { id: "ultt-a", name: "Upper limb neurodynamic test A", finding: "左右差を伴って既知の神経症状が再現し、構造分化で変化" },
+      { id: "rotation", name: "頸部患側回旋", finding: "患側回旋が約60度未満または明らかな左右差" }
+    ],
+    treatments: ["神経学的所見を追跡しながら活動を維持", "症状に応じた頸部・肩甲帯運動", "医療者による運動療法、必要に応じた徒手療法の併用"],
+    selfCare: ["症状を強く末梢へ広げる姿勢を長時間続けない", "短い休憩と姿勢変更を増やす", "軽い運動で症状が腕から首側へ戻るか観察する"],
+    cautions: ["進行する筋力低下、歩行障害、手の巧緻運動低下、膀胱直腸障害は早急に評価", "発熱、がん既往、重大外傷を伴う頸部痛は医療機関へ"]
+  },
+  {
+    id: "lumbar-radicular-pain",
+    name: "腰部神経根性疼痛／坐骨神経痛の疑い",
+    summary: "腰殿部から下肢へ広がる症状を、神経学的所見と神経伸張テスト、症状の変化から整理します。",
+    regions: ["腰", "臀部", "太もも", "下腿", "足"],
+    movements: ["前かがみ", "長く座る", "立ち上がる", "歩く"],
+    keywords: ["しびれ", "放散痛", "坐骨神経痛", "感覚低下", "筋力低下"],
+    muscles: ["多裂筋", "脊柱起立筋", "殿筋群", "下肢筋群"],
+    joints: ["腰椎", "椎間板", "椎間孔", "仙腸関節"],
+    nerves: ["腰仙部神経根 L4-S1", "坐骨神経"],
+    tests: [
+      { id: "slr", name: "Straight leg raise", finding: "下肢挙上で既知の下肢症状が再現し、足関節や頸部操作で変化" },
+      { id: "crossed-slr", name: "Crossed straight leg raise", finding: "健側下肢の挙上で患側の下肢症状が再現" },
+      { id: "neuro-screen", name: "下肢神経学的スクリーニング", finding: "筋力・感覚・腱反射に神経根分布と整合する左右差" }
+    ],
+    treatments: ["重篤疾患を除外したうえで通常活動を可能な範囲で継続", "個別化した運動療法", "徒手療法は運動を含む治療パッケージの一部として検討", "症状や神経脱落所見に応じて医師へ紹介"],
+    selfCare: ["完全な安静を続けず、短い歩行など可能な活動を維持", "症状が下肢へ強く広がる動作量を一時調整", "座位を定期的に中断する"],
+    cautions: ["尿閉・失禁、会陰部感覚低下、両脚の進行性脱力は緊急評価", "発熱、がん既往、重大外傷、説明しにくい体重減少を伴う場合は医療機関へ"]
+  },
+  {
+    id: "patellofemoral-pain",
+    name: "膝蓋大腿痛",
+    summary: "膝蓋骨周囲・後面の痛みが、荷重下で膝を曲げる活動により再現される臨床像です。",
+    regions: ["膝前面", "膝"],
+    movements: ["階段を下りる", "階段を上る", "しゃがむ", "走る", "長く座る"],
+    keywords: ["膝前面痛", "階段", "スクワット", "ランニング"],
+    muscles: ["大腿四頭筋", "中殿筋", "大殿筋", "下腿三頭筋"],
+    joints: ["膝蓋大腿関節", "脛骨大腿関節"],
+    nerves: [],
+    tests: [
+      { id: "squat", name: "スクワット", finding: "荷重下膝屈曲で膝蓋骨周囲の既知症状が再現" },
+      { id: "stairs", name: "階段昇降", finding: "とくに降段で膝前面痛が再現" },
+      { id: "patellar-palpation", name: "膝蓋骨周囲の触診", finding: "膝蓋骨辺縁の圧痛が症状と一致" }
+    ],
+    treatments: ["股関節・膝を組み合わせた筋力トレーニング", "走行・階段・スクワット負荷の一時調整", "個別評価に基づくテーピングや足部介入の短期併用"],
+    selfCare: ["痛みが翌日まで増え続けない範囲で運動量を調整", "浅いスクワットから段階的に深さと負荷を増やす", "走行距離・速度・坂道を一度に増やさない"],
+    cautions: ["大きな腫れ、ロッキング、外傷後の荷重不能、発熱を伴う場合は評価を優先"]
+  },
+  {
+    id: "meniscal-injury",
+    name: "半月板損傷の疑い",
+    summary: "捻転機転、関節裂隙痛、腫脹、引っかかりなどを組み合わせて評価します。単一テストだけでは確定しません。",
+    regions: ["膝内側", "膝外側", "膝"],
+    movements: ["ひねる", "しゃがむ", "方向転換", "階段を下りる"],
+    keywords: ["ロッキング", "引っかかり", "関節裂隙", "腫れ", "捻った"],
+    muscles: ["大腿四頭筋", "ハムストリングス", "膝窩筋"],
+    joints: ["脛骨大腿関節", "内側半月板", "外側半月板"],
+    nerves: [],
+    tests: [
+      { id: "joint-line", name: "関節裂隙圧痛", finding: "内側または外側関節裂隙の圧痛が主訴と一致" },
+      { id: "thessaly", name: "Thessaly test", finding: "軽度膝屈曲位での回旋により関節裂隙痛や引っかかりが再現" },
+      { id: "mcmurray", name: "McMurray test", finding: "膝屈伸と回旋で症状に一致する疼痛またはクリック" }
+    ],
+    treatments: ["腫脹と症状に応じた負荷調整", "膝・股関節の筋力と動作の段階的回復", "持続するロッキングや機能障害では整形外科評価"],
+    selfCare: ["急性期は深い屈曲と強い捻転を減らす", "可能な範囲で歩行と軽い膝運動を維持", "腫れと翌日の反応を見ながら負荷を増やす"],
+    cautions: ["膝が物理的に伸びないロッキング、外傷後の荷重不能、大きな急性腫脹は早期評価"]
+  }
+];
+
+let items = loadItems();
+let selectedId = items[0]?.id ?? null;
+let testResults = {};
+
+const $ = (selector) => document.querySelector(selector);
+const elements = {
+  region: $("#regionSelect"), movement: $("#movementSelect"), keyword: $("#keywordInput"),
+  quickRegions: $("#quickRegions"), candidates: $("#candidateList"), count: $("#resultCount"),
+  detail: $("#detailPanel"), reset: $("#resetButton"), openEditor: $("#openEditorButton"),
+  dialog: $("#editorDialog"), editorSelect: $("#editorItemSelect"), editorForm: $("#editorForm"),
+  newItem: $("#newItemButton"), deleteItem: $("#deleteItemButton"), toast: $("#toast")
+};
+
+function loadItems() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    return Array.isArray(saved) && saved.length ? saved : structuredClone(seedData);
+  } catch { return structuredClone(seedData); }
+}
+
+function saveItems() { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+function unique(values) { return [...new Set(values.flat().filter(Boolean))].sort((a, b) => a.localeCompare(b, "ja")); }
+function splitComma(value) { return value.split(/[、,]/).map(v => v.trim()).filter(Boolean); }
+function splitLines(value) { return value.split(/\r?\n/).map(v => v.trim()).filter(Boolean); }
+function escapeHtml(value = "") { return String(value).replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char]); }
+
+function populateFilters() {
+  const selectedRegion = elements.region.value;
+  const selectedMovement = elements.movement.value;
+  const regions = unique(items.map(item => item.regions));
+  const movements = unique(items.map(item => item.movements));
+  elements.region.innerHTML = '<option value="">すべての部位</option>' + regions.map(v => `<option>${escapeHtml(v)}</option>`).join("");
+  elements.movement.innerHTML = '<option value="">すべての動き</option>' + movements.map(v => `<option>${escapeHtml(v)}</option>`).join("");
+  elements.region.value = regions.includes(selectedRegion) ? selectedRegion : "";
+  elements.movement.value = movements.includes(selectedMovement) ? selectedMovement : "";
+  elements.quickRegions.innerHTML = regions.map(region => `<button class="chip ${region === elements.region.value ? "active" : ""}" type="button" data-region="${escapeHtml(region)}">${escapeHtml(region)}</button>`).join("");
+}
+
+function scoreItem(item) {
+  let score = 0;
+  const reasons = [];
+  const region = elements.region.value;
+  const movement = elements.movement.value;
+  const query = elements.keyword.value.trim().toLowerCase();
+  if (region) {
+    if (item.regions.includes(region)) { score += 35; reasons.push(region); }
+    else score -= 18;
+  }
+  if (movement) {
+    if (item.movements.includes(movement)) { score += 30; reasons.push(movement); }
+    else score -= 12;
+  }
+  if (query) {
+    const fields = [item.name, item.summary, ...item.regions, ...item.movements, ...item.keywords, ...item.muscles, ...item.joints, ...item.nerves].join(" ").toLowerCase();
+    const terms = query.split(/\s+/).filter(Boolean);
+    const hits = terms.filter(term => fields.includes(term));
+    score += hits.length * 18;
+    if (hits.length) reasons.push(...hits);
+    else score -= 10;
+  }
+  item.tests.forEach(test => {
+    const result = testResults[`${item.id}:${test.id}`];
+    if (result === "positive") { score += 14; reasons.push(`${test.name}＋`); }
+    if (result === "negative") score -= 9;
+  });
+  return { item, score: Math.max(0, score), reasons: [...new Set(reasons)].slice(0, 3) };
+}
+
+function getRankedItems() {
+  const ranked = items.map((item, index) => ({ ...scoreItem(item), index })).sort((a, b) => b.score - a.score || a.index - b.index);
+  const max = Math.max(...ranked.map(entry => entry.score), 1);
+  return ranked.map(entry => ({ ...entry, displayScore: Math.round((entry.score / max) * 100) }));
+}
+
+function render() {
+  populateFilters();
+  const ranked = getRankedItems();
+  if (!ranked.some(entry => entry.item.id === selectedId)) selectedId = ranked[0]?.item.id ?? null;
+  elements.count.textContent = ranked.length;
+  elements.candidates.innerHTML = ranked.length ? ranked.map(({ item, displayScore, reasons }) => `
+    <button class="candidate-card ${item.id === selectedId ? "selected" : ""}" type="button" data-id="${escapeHtml(item.id)}">
+      <span class="candidate-top"><span class="candidate-name">${escapeHtml(item.name)}</span><span class="score">関連度 ${displayScore}</span></span>
+      <span class="score-track"><span class="score-fill" style="width:${displayScore}%"></span></span>
+      <span class="candidate-reason">${reasons.length ? `一致: ${reasons.map(escapeHtml).join(" / ")}` : "検査やキーワードで絞り込めます"}</span>
+    </button>`).join("") : '<p class="empty">候補がありません。データ編集から追加できます。</p>';
+  const selected = items.find(item => item.id === selectedId);
+  elements.detail.innerHTML = selected ? renderDetail(selected) : '<p class="empty">候補を選択してください。</p>';
+}
+
+function renderTags(values) { return values.length ? `<div class="tag-list">${values.map(v => `<span class="tag">${escapeHtml(v)}</span>`).join("")}</div>` : '<p class="source-note">登録なし</p>'; }
+function renderList(values) { return values.length ? `<ul class="plain-list">${values.map(v => `<li>${escapeHtml(v)}</li>`).join("")}</ul>` : '<p class="source-note">登録なし</p>'; }
+
+function renderDetail(item) {
+  return `
+    <div class="detail-hero"><p class="step-label">STEP 3</p><h2>${escapeHtml(item.name)}</h2><p>${escapeHtml(item.summary)}</p></div>
+    <section class="detail-section"><h3>関連する筋・関節・神経</h3><div class="anatomy-grid">
+      <div class="anatomy-box"><h3>筋</h3>${renderTags(item.muscles)}</div>
+      <div class="anatomy-box"><h3>関節・組織</h3>${renderTags(item.joints)}</div>
+      <div class="anatomy-box"><h3>神経</h3>${renderTags(item.nerves)}</div>
+    </div></section>
+    <section class="detail-section"><h3>検査項目</h3><p class="helper">結果を選ぶと全候補の関連度を再計算します。検査は病歴・神経学的所見などと組み合わせて解釈してください。</p><div class="test-list">
+      ${item.tests.map(test => { const key = `${item.id}:${test.id}`; const current = testResults[key] || "unknown"; return `
+        <article class="test-card"><h3>${escapeHtml(test.name)}</h3><p>陽性の目安: ${escapeHtml(test.finding)}</p>
+          <div class="segmented" data-test-key="${escapeHtml(key)}">
+            <button type="button" data-result="positive" class="${current === "positive" ? "active" : ""}">陽性</button>
+            <button type="button" data-result="negative" class="${current === "negative" ? "active" : ""}">陰性</button>
+            <button type="button" data-result="unknown" class="${current === "unknown" ? "active" : ""}">未実施</button>
+          </div>
+        </article>`; }).join("")}
+    </div></section>
+    <section class="detail-section"><h3>治療候補</h3>${renderList(item.treatments)}</section>
+    <section class="detail-section"><h3>セルフケア候補</h3>${renderList(item.selfCare)}</section>
+    <section class="detail-section"><div class="caution-box"><h3>注意・紹介の目安</h3>${renderList(item.cautions)}</div></section>
+    <p class="source-note">表示内容は教育・臨床推論支援用の初期データです。個別の診断・治療指示ではありません。</p>`;
+}
+
+function showToast(message) {
+  elements.toast.textContent = message;
+  elements.toast.classList.add("show");
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => elements.toast.classList.remove("show"), 2200);
+}
+
+function fillEditor(item) {
+  $("#editId").value = item?.id || "";
+  $("#editName").value = item?.name || "";
+  $("#editSummary").value = item?.summary || "";
+  $("#editRegions").value = item?.regions?.join(", ") || "";
+  $("#editMovements").value = item?.movements?.join(", ") || "";
+  $("#editKeywords").value = item?.keywords?.join(", ") || "";
+  $("#editMuscles").value = item?.muscles?.join(", ") || "";
+  $("#editJoints").value = item?.joints?.join(", ") || "";
+  $("#editNerves").value = item?.nerves?.join(", ") || "";
+  $("#editTests").value = item?.tests?.map(t => `${t.name} | ${t.finding}`).join("\n") || "";
+  $("#editTreatments").value = item?.treatments?.join("\n") || "";
+  $("#editSelfCare").value = item?.selfCare?.join("\n") || "";
+  $("#editCautions").value = item?.cautions?.join("\n") || "";
+  elements.deleteItem.disabled = !item;
+}
+
+function refreshEditorSelect(id = selectedId) {
+  elements.editorSelect.innerHTML = items.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
+  if (items.some(item => item.id === id)) elements.editorSelect.value = id;
+  fillEditor(items.find(item => item.id === elements.editorSelect.value));
+}
+
+function slugify(name) {
+  const base = name.toLowerCase().trim().replace(/[^a-z0-9\u3040-\u30ff\u3400-\u9fff]+/g, "-").replace(/^-|-$/g, "");
+  return `${base || "item"}-${Date.now().toString(36)}`;
+}
+
+elements.region.addEventListener("change", render);
+elements.movement.addEventListener("change", render);
+elements.keyword.addEventListener("input", render);
+elements.quickRegions.addEventListener("click", event => {
+  const button = event.target.closest("[data-region]");
+  if (!button) return;
+  elements.region.value = elements.region.value === button.dataset.region ? "" : button.dataset.region;
+  render();
+});
+elements.candidates.addEventListener("click", event => {
+  const card = event.target.closest("[data-id]");
+  if (!card) return;
+  selectedId = card.dataset.id;
+  render();
+  if (matchMedia("(max-width: 760px)").matches) elements.detail.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+elements.detail.addEventListener("click", event => {
+  const button = event.target.closest("[data-result]");
+  if (!button) return;
+  const group = button.closest("[data-test-key]");
+  testResults[group.dataset.testKey] = button.dataset.result;
+  render();
+});
+elements.reset.addEventListener("click", () => {
+  elements.region.value = ""; elements.movement.value = ""; elements.keyword.value = ""; testResults = {}; render();
+});
+elements.openEditor.addEventListener("click", () => { refreshEditorSelect(); elements.dialog.showModal(); });
+elements.editorSelect.addEventListener("change", () => fillEditor(items.find(item => item.id === elements.editorSelect.value)));
+elements.newItem.addEventListener("click", () => { elements.editorSelect.value = ""; fillEditor(null); $("#editName").focus(); });
+
+elements.editorForm.addEventListener("submit", event => {
+  event.preventDefault();
+  const existingId = $("#editId").value;
+  const name = $("#editName").value.trim();
+  const tests = splitLines($("#editTests").value).map((line, index) => {
+    const [testName, ...finding] = line.split("|");
+    return { id: `test-${index}-${slugify(testName).slice(0, 30)}`, name: testName.trim(), finding: finding.join("|").trim() || "登録なし" };
+  });
+  const item = {
+    id: existingId || slugify(name), name, summary: $("#editSummary").value.trim(),
+    regions: splitComma($("#editRegions").value), movements: splitComma($("#editMovements").value), keywords: splitComma($("#editKeywords").value),
+    muscles: splitComma($("#editMuscles").value), joints: splitComma($("#editJoints").value), nerves: splitComma($("#editNerves").value),
+    tests, treatments: splitLines($("#editTreatments").value), selfCare: splitLines($("#editSelfCare").value), cautions: splitLines($("#editCautions").value)
+  };
+  const index = items.findIndex(entry => entry.id === existingId);
+  if (index >= 0) items[index] = item; else items.push(item);
+  selectedId = item.id; saveItems(); refreshEditorSelect(item.id); render(); showToast("データを保存しました");
+});
+
+elements.deleteItem.addEventListener("click", () => {
+  const id = $("#editId").value;
+  if (!id || !confirm("この候補を削除しますか？")) return;
+  items = items.filter(item => item.id !== id);
+  selectedId = items[0]?.id ?? null; saveItems(); refreshEditorSelect(); render(); showToast("削除しました");
+});
+
+$("#exportButton").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
+  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "msk-data.json"; link.click(); URL.revokeObjectURL(link.href);
+});
+$("#importInput").addEventListener("change", async event => {
+  try {
+    const data = JSON.parse(await event.target.files[0].text());
+    if (!Array.isArray(data) || !data.every(item => item.id && item.name && Array.isArray(item.tests))) throw new Error();
+    items = data; selectedId = items[0]?.id ?? null; saveItems(); refreshEditorSelect(); render(); showToast("JSONを読み込みました");
+  } catch { alert("読み込めるJSON形式ではありません。"); }
+  event.target.value = "";
+});
+$("#restoreButton").addEventListener("click", () => {
+  if (!confirm("追加・編集した内容を破棄して初期データに戻しますか？")) return;
+  items = structuredClone(seedData); selectedId = items[0].id; testResults = {}; saveItems(); refreshEditorSelect(); render(); showToast("初期データに戻しました");
+});
+
+render();
