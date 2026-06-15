@@ -282,21 +282,34 @@ function render() {
   renderDirectories();
 }
 
-function renderTags(values, page = "", directory = "") { return values.length ? `<div class="tag-list">${values.map(v => page ? `<button class="tag link-tag" type="button" data-directory-link="${page}" data-directory-key="${directory}" data-directory-value="${escapeHtml(encodeURIComponent(v))}">${escapeHtml(v)}</button>` : `<span class="tag">${escapeHtml(v)}</span>`).join("")}</div>` : '<p class="source-note">登録なし</p>'; }
-function renderList(values, page = "", directory = "") { return values.length ? `<ul class="plain-list">${values.map(v => `<li>${page ? `<button class="text-button inline-link" type="button" data-directory-link="${page}" data-directory-key="${directory}" data-directory-value="${escapeHtml(encodeURIComponent(v))}">${escapeHtml(v)}</button>` : escapeHtml(v)}</li>`).join("")}</ul>` : '<p class="source-note">登録なし</p>'; }
+function renderEntityPill(value, page = "", directory = "", kind = "", subtype = "") {
+  const encoded = escapeHtml(encodeURIComponent(value));
+  const label = escapeHtml(value);
+  if (!page && !kind) return `<span class="tag">${label}</span>`;
+  return `<span class="entity-pill">
+    ${page ? `<button class="tag link-tag" type="button" data-directory-link="${page}" data-directory-key="${directory}" data-directory-value="${encoded}">${label}</button>` : `<span class="tag">${label}</span>`}
+    ${kind ? `<button class="pill-edit" type="button" data-edit-entity="${kind}" data-entity-subtype="${subtype}" data-entity-name="${encoded}" aria-label="${label}を編集">編集</button>` : ""}
+  </span>`;
+}
+function renderTags(values, page = "", directory = "", kind = "", subtype = "") { return values.length ? `<div class="tag-list">${values.map(v => renderEntityPill(v, page, directory, kind, subtype)).join("")}</div>` : '<p class="source-note">登録なし</p>'; }
+function renderList(values, page = "", directory = "", kind = "", subtype = "") { return values.length ? `<ul class="plain-list">${values.map(v => `<li><span class="list-row">${page ? `<button class="text-button inline-link" type="button" data-directory-link="${page}" data-directory-key="${directory}" data-directory-value="${escapeHtml(encodeURIComponent(v))}">${escapeHtml(v)}</button>` : escapeHtml(v)}${kind ? `<button class="text-button inline-link" type="button" data-edit-entity="${kind}" data-entity-subtype="${subtype}" data-entity-name="${escapeHtml(encodeURIComponent(v))}">編集</button>` : ""}</span></li>`).join("")}</ul>` : '<p class="source-note">登録なし</p>'; }
 
 function renderDetail(item) {
   return `
-    <div class="detail-hero"><p class="step-label">STEP 3</p><h2>${escapeHtml(item.name)}</h2><p>${escapeHtml(item.summary)}</p></div>
-    <section class="detail-section"><h3>関連する部位・症状</h3>${renderTags([...item.regions, ...item.movements, ...item.keywords], "symptoms", "symptoms")}</section>
+    <div class="detail-hero"><p class="step-label">STEP 3</p><h2>${escapeHtml(item.name)}</h2><p>${escapeHtml(item.summary)}</p><button class="button button-secondary" type="button" data-edit-candidate="${escapeHtml(item.id)}">この候補を編集</button></div>
+    <section class="detail-section"><h3>関連する部位・症状</h3>
+      <h3>部位</h3>${renderTags(item.regions, "symptoms", "symptoms", "symptom", "region")}
+      <h3>動作・活動</h3>${renderTags(item.movements, "symptoms", "symptoms", "symptom", "movement")}
+      <h3>症状・特徴</h3>${renderTags(item.keywords, "symptoms", "symptoms", "symptom", "keyword")}
+    </section>
     <section class="detail-section"><h3>関連する筋・関節・神経</h3><div class="anatomy-grid">
-      <div class="anatomy-box"><h3>筋</h3>${renderTags(item.muscles, "anatomy", "anatomy")}</div>
-      <div class="anatomy-box"><h3>関節・組織</h3>${renderTags(item.joints, "anatomy", "anatomy")}</div>
-      <div class="anatomy-box"><h3>神経</h3>${renderTags(item.nerves, "anatomy", "anatomy")}</div>
+      <div class="anatomy-box"><h3>筋</h3>${renderTags(item.muscles, "anatomy", "anatomy", "anatomy", "muscle")}</div>
+      <div class="anatomy-box"><h3>関節・組織</h3>${renderTags(item.joints, "anatomy", "anatomy", "anatomy", "joint")}</div>
+      <div class="anatomy-box"><h3>神経</h3>${renderTags(item.nerves, "anatomy", "anatomy", "anatomy", "nerve")}</div>
     </div></section>
     <section class="detail-section"><h3>検査項目</h3><p class="helper">結果を選ぶと全候補の関連度を再計算します。検査は病歴・神経学的所見などと組み合わせて解釈してください。</p><div class="test-list">
       ${item.tests.map(test => { const key = `${item.id}:${test.id}`; const current = testResults[key] || "unknown"; return `
-        <article class="test-card"><h3><button class="text-button inline-link" type="button" data-directory-link="tests" data-directory-key="tests" data-directory-value="${escapeHtml(encodeURIComponent(test.name))}">${escapeHtml(test.name)}</button></h3><p>陽性の目安: ${escapeHtml(test.finding)}</p>
+        <article class="test-card"><h3><span class="list-row"><button class="text-button inline-link" type="button" data-directory-link="tests" data-directory-key="tests" data-directory-value="${escapeHtml(encodeURIComponent(test.name))}">${escapeHtml(test.name)}</button><button class="text-button inline-link" type="button" data-edit-entity="test" data-entity-subtype="test" data-entity-name="${escapeHtml(encodeURIComponent(test.name))}">編集</button></span></h3><p>陽性の目安: ${escapeHtml(test.finding)}</p>
           <div class="segmented" data-test-key="${escapeHtml(key)}">
             <button type="button" data-result="positive" class="${current === "positive" ? "active" : ""}">陽性</button>
             <button type="button" data-result="negative" class="${current === "negative" ? "active" : ""}">陰性</button>
@@ -304,8 +317,8 @@ function renderDetail(item) {
           </div>
         </article>`; }).join("")}
     </div></section>
-    <section class="detail-section"><h3>治療候補</h3>${renderList(item.treatments, "treatments", "treatments")}</section>
-    <section class="detail-section"><h3>セルフケア候補</h3>${renderList(item.selfCare, "treatments", "treatments")}</section>
+    <section class="detail-section"><h3>治療候補</h3>${renderList(item.treatments, "treatments", "treatments", "treatment", "treatment")}</section>
+    <section class="detail-section"><h3>セルフケア候補</h3>${renderList(item.selfCare, "treatments", "treatments", "treatment", "selfCare")}</section>
     <section class="detail-section"><div class="caution-box"><h3>注意・紹介の目安</h3>${renderList(item.cautions)}</div></section>
     <p class="source-note">表示内容は教育・臨床推論支援用の初期データです。個別の診断・治療指示ではありません。</p>`;
 }
@@ -511,6 +524,13 @@ document.addEventListener("click", event => {
   if (nav) { switchPage(nav.dataset.page); return; }
   const addButton = event.target.closest("[data-add-entity]");
   if (addButton) { openEntityEditor(addButton.dataset.addEntity); return; }
+  const candidateEditButton = event.target.closest("[data-edit-candidate]");
+  if (candidateEditButton) {
+    selectedId = candidateEditButton.dataset.editCandidate;
+    refreshEditorSelect(selectedId);
+    elements.dialog.showModal();
+    return;
+  }
   const editButton = event.target.closest("[data-edit-entity]");
   if (editButton) {
     openEntityEditor(editButton.dataset.editEntity, editButton.dataset.entitySubtype, decodeURIComponent(editButton.dataset.entityName));
