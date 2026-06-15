@@ -114,6 +114,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(69, 126, 101
 .tag-list { display: flex; flex-wrap: wrap; gap: 7px; }
 .tag { padding: 5px 9px; border-radius: 8px; background: var(--brand-soft); color: var(--brand); font-size: .78rem; font-weight: 700; }
 .link-tag { border: 0; cursor: pointer; text-align: left; }
+.entity-pill { display: inline-flex; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: var(--brand-soft); }
+.entity-pill .tag { border-radius: 0; border: 0; }
+.pill-edit { min-width: 38px; border: 0; border-left: 1px solid rgba(18,55,42,.12); background: white; color: var(--brand); font-size: .75rem; font-weight: 900; }
 .anatomy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .anatomy-box { padding: 12px; border-radius: 10px; background: #f7f8f6; }
 .anatomy-box p { margin-bottom: 0; color: var(--muted); font-size: .82rem; }
@@ -127,6 +130,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(69, 126, 101
 .segmented button.active[data-result="unknown"] { background: #eef0ee; border-color: #818a84; }
 .plain-list { margin: 0; padding-left: 20px; }
 .plain-list li + li { margin-top: 7px; }
+.list-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.list-row .inline-link { flex: 1; }
 .caution-box { padding: 13px; border-radius: 10px; background: #fff3f1; color: #722c26; }
 .source-note { color: var(--muted); font-size: .76rem; }
 
