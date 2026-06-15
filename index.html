@@ -32,24 +32,38 @@
       </div>
 
       <div class="search-grid">
-        <label>
-          痛みの部位
+        <div class="field-group">
+          <label for="regionSelect">痛みの部位（1つ）</label>
           <select id="regionSelect">
-            <option value="">すべての部位</option>
+            <option value="">部位を選択</option>
           </select>
-        </label>
-        <label>
-          痛い・困る動き
-          <select id="movementSelect">
-            <option value="">すべての動き</option>
-          </select>
-        </label>
+          <div class="inline-add">
+            <input id="newRegionInput" placeholder="部位を追加（例：足首）" aria-label="追加する部位">
+            <button id="addRegionButton" class="button button-secondary" type="button">追加</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <span class="field-label">症状・痛い動き（複数選択）</span>
+          <div id="movementChoices" class="choice-grid" aria-label="症状と痛い動き"></div>
+        </div>
       </div>
       <label>
         キーワード
         <input id="keywordInput" type="search" placeholder="例：しびれ、階段、夜間痛" autocomplete="off">
       </label>
       <div id="quickRegions" class="chip-row" aria-label="部位のクイック選択"></div>
+    </section>
+
+    <section class="panel sfma-panel" aria-labelledby="sfmaHeading">
+      <div class="section-heading">
+        <div>
+          <p class="step-label">OPTION</p>
+          <h2 id="sfmaHeading">SFMAパターン</h2>
+        </div>
+      </div>
+      <p class="helper">FN: 機能的・疼痛なし / FP: 機能的・疼痛あり / DN: 非機能的・疼痛なし / DP: 非機能的・疼痛あり</p>
+      <div id="sfmaInputs" class="sfma-grid"></div>
+      <p class="source-note">SFMA結果は診断名ではありません。候補の関連度には補助的な小さい重みで反映します。</p>
     </section>
 
     <div class="workspace">
