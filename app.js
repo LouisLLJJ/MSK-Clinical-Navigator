@@ -1,4 +1,13 @@
 const STORAGE_KEY = "msk-clinical-navigator-data-v1";
+const CUSTOM_REGIONS_KEY = "msk-clinical-navigator-custom-regions-v1";
+const SFMA_PATTERNS = [
+  { id: "cervical-flexion", label: "頸部屈曲", group: "cervical" },
+  { id: "cervical-extension", label: "頸部伸展", group: "cervical" },
+  { id: "cervical-rotation-right", label: "頸部回旋（右）", group: "cervical" },
+  { id: "cervical-rotation-left", label: "頸部回旋（左）", group: "cervical" },
+  { id: "multi-segmental-flexion", label: "多分節屈曲", group: "multisegmental" },
+  { id: "multi-segmental-extension", label: "多分節伸展", group: "multisegmental" }
+];
 
 const seedData = [
   {
@@ -120,10 +129,14 @@ const seedData = [
 let items = loadItems();
 let selectedId = items[0]?.id ?? null;
 let testResults = {};
+let selectedMovements = new Set();
+let sfmaResults = {};
+let customRegions = loadCustomRegions();
 
 const $ = (selector) => document.querySelector(selector);
 const elements = {
-  region: $("#regionSelect"), movement: $("#movementSelect"), keyword: $("#keywordInput"),
+  region: $("#regionSelect"), movementChoices: $("#movementChoices"), keyword: $("#keywordInput"),
+  newRegion: $("#newRegionInput"), addRegion: $("#addRegionButton"), sfma: $("#sfmaInputs"),
   quickRegions: $("#quickRegions"), candidates: $("#candidateList"), count: $("#resultCount"),
   detail: $("#detailPanel"), reset: $("#resetButton"), openEditor: $("#openEditorButton"),
   dialog: $("#editorDialog"), editorSelect: $("#editorItemSelect"), editorForm: $("#editorForm"),
@@ -137,7 +150,15 @@ function loadItems() {
   } catch { return structuredClone(seedData); }
 }
 
+function loadCustomRegions() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CUSTOM_REGIONS_KEY));
+    return Array.isArray(saved) ? saved.filter(Boolean) : [];
+  } catch { return []; }
+}
+
 function saveItems() { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+function saveCustomRegions() { localStorage.setItem(CUSTOM_REGIONS_KEY, JSON.stringify(customRegions)); }
 function unique(values) { return [...new Set(values.flat().filter(Boolean))].sort((a, b) => a.localeCompare(b, "ja")); }
 function splitComma(value) { return value.split(/[、,]/).map(v => v.trim()).filter(Boolean); }
 function splitLines(value) { return value.split(/\r?\n/).map(v => v.trim()).filter(Boolean); }
@@ -145,30 +166,58 @@ function escapeHtml(value = "") { return String(value).replace(/[&<>'"]/g, char 
 
 function populateFilters() {
   const selectedRegion = elements.region.value;
-  const selectedMovement = elements.movement.value;
-  const regions = unique(items.map(item => item.regions));
-  const movements = unique(items.map(item => item.movements));
-  elements.region.innerHTML = '<option value="">すべての部位</option>' + regions.map(v => `<option>${escapeHtml(v)}</option>`).join("");
-  elements.movement.innerHTML = '<option value="">すべての動き</option>' + movements.map(v => `<option>${escapeHtml(v)}</option>`).join("");
+  const regions = unique([...items.map(item => item.regions), customRegions]);
+  const symptoms = unique(items.flatMap(item => [...item.movements, ...item.keywords]));
+  elements.region.innerHTML = '<option value="">部位を選択</option>' + regions.map(v => `<option>${escapeHtml(v)}</option>`).join("");
   elements.region.value = regions.includes(selectedRegion) ? selectedRegion : "";
-  elements.movement.value = movements.includes(selectedMovement) ? selectedMovement : "";
+  elements.movementChoices.innerHTML = symptoms.map(movement => `
+    <label class="choice-item">
+      <input type="checkbox" value="${escapeHtml(movement)}" ${selectedMovements.has(movement) ? "checked" : ""}>
+      <span>${escapeHtml(movement)}</span>
+    </label>`).join("");
   elements.quickRegions.innerHTML = regions.map(region => `<button class="chip ${region === elements.region.value ? "active" : ""}" type="button" data-region="${escapeHtml(region)}">${escapeHtml(region)}</button>`).join("");
+  elements.sfma.innerHTML = SFMA_PATTERNS.map(pattern => `
+    <label class="sfma-item">${escapeHtml(pattern.label)}
+      <select data-sfma-id="${pattern.id}">
+        <option value="">未入力</option>
+        <option value="FN" ${sfmaResults[pattern.id] === "FN" ? "selected" : ""}>FN</option>
+        <option value="FP" ${sfmaResults[pattern.id] === "FP" ? "selected" : ""}>FP</option>
+        <option value="DN" ${sfmaResults[pattern.id] === "DN" ? "selected" : ""}>DN</option>
+        <option value="DP" ${sfmaResults[pattern.id] === "DP" ? "selected" : ""}>DP</option>
+      </select>
+    </label>`).join("");
+}
+
+function getSfmaScore(item) {
+  let score = 0;
+  const reasons = [];
+  const cervicalRelevant = item.regions.some(region => ["首", "肩甲骨周囲", "肩", "腕", "手"].includes(region));
+  const multisegmentalRelevant = item.regions.some(region => ["腰", "臀部", "太もも", "下腿", "足"].includes(region));
+  SFMA_PATTERNS.forEach(pattern => {
+    const result = sfmaResults[pattern.id];
+    if (!result || result === "FN") return;
+    const relevant = pattern.group === "cervical" ? cervicalRelevant : multisegmentalRelevant;
+    if (!relevant) return;
+    if (result === "FP" || result === "DP") score += 7;
+    if (result === "DN") score += 3;
+    reasons.push(`${pattern.label} ${result}`);
+  });
+  return { score, reasons };
 }
 
 function scoreItem(item) {
   let score = 0;
   const reasons = [];
   const region = elements.region.value;
-  const movement = elements.movement.value;
   const query = elements.keyword.value.trim().toLowerCase();
   if (region) {
     if (item.regions.includes(region)) { score += 35; reasons.push(region); }
     else score -= 18;
   }
-  if (movement) {
-    if (item.movements.includes(movement)) { score += 30; reasons.push(movement); }
-    else score -= 12;
-  }
+  selectedMovements.forEach(movement => {
+    if (item.movements.includes(movement) || item.keywords.includes(movement)) { score += 22; reasons.push(movement); }
+    else score -= 5;
+  });
   if (query) {
     const fields = [item.name, item.summary, ...item.regions, ...item.movements, ...item.keywords, ...item.muscles, ...item.joints, ...item.nerves].join(" ").toLowerCase();
     const terms = query.split(/\s+/).filter(Boolean);
@@ -182,6 +231,9 @@ function scoreItem(item) {
     if (result === "positive") { score += 14; reasons.push(`${test.name}＋`); }
     if (result === "negative") score -= 9;
   });
+  const sfma = getSfmaScore(item);
+  score += sfma.score;
+  reasons.push(...sfma.reasons);
   return { item, score: Math.max(0, score), reasons: [...new Set(reasons)].slice(0, 3) };
 }
 
@@ -269,8 +321,36 @@ function slugify(name) {
 }
 
 elements.region.addEventListener("change", render);
-elements.movement.addEventListener("change", render);
 elements.keyword.addEventListener("input", render);
+elements.movementChoices.addEventListener("change", event => {
+  const input = event.target.closest('input[type="checkbox"]');
+  if (!input) return;
+  if (input.checked) selectedMovements.add(input.value); else selectedMovements.delete(input.value);
+  render();
+});
+elements.sfma.addEventListener("change", event => {
+  const select = event.target.closest("[data-sfma-id]");
+  if (!select) return;
+  if (select.value) sfmaResults[select.dataset.sfmaId] = select.value; else delete sfmaResults[select.dataset.sfmaId];
+  render();
+});
+elements.addRegion.addEventListener("click", () => {
+  const region = elements.newRegion.value.trim();
+  if (!region) return;
+  const allRegions = unique(items.map(item => item.regions));
+  if (!allRegions.includes(region) && !customRegions.includes(region)) {
+    customRegions.push(region);
+    saveCustomRegions();
+  }
+  elements.newRegion.value = "";
+  populateFilters();
+  elements.region.value = region;
+  render();
+  showToast(`部位「${region}」を追加しました`);
+});
+elements.newRegion.addEventListener("keydown", event => {
+  if (event.key === "Enter") { event.preventDefault(); elements.addRegion.click(); }
+});
 elements.quickRegions.addEventListener("click", event => {
   const button = event.target.closest("[data-region]");
   if (!button) return;
@@ -292,7 +372,7 @@ elements.detail.addEventListener("click", event => {
   render();
 });
 elements.reset.addEventListener("click", () => {
-  elements.region.value = ""; elements.movement.value = ""; elements.keyword.value = ""; testResults = {}; render();
+  elements.region.value = ""; elements.keyword.value = ""; selectedMovements.clear(); sfmaResults = {}; testResults = {}; render();
 });
 elements.openEditor.addEventListener("click", () => { refreshEditorSelect(); elements.dialog.showModal(); });
 elements.editorSelect.addEventListener("change", () => fillEditor(items.find(item => item.id === elements.editorSelect.value)));
