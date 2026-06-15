@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#12372a">
+  <title>MSK Clinical Navigator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">鑑別・評価支援 MVP</p>
+      <h1>MSK Clinical Navigator</h1>
+    </div>
+    <button id="openEditorButton" class="button button-secondary" type="button">データ編集</button>
+  </header>
+
+  <main>
+    <section class="notice" aria-label="重要な注意">
+      <strong>診断を確定するアプリではありません。</strong>
+      <span>臨床推論の整理用です。急な麻痺、膀胱直腸障害、発熱、重大な外傷、安静時にも増悪する強い痛みなどがあれば、候補検索より先に緊急評価を検討してください。</span>
+    </section>
+
+    <section class="panel search-panel" aria-labelledby="searchHeading">
+      <div class="section-heading">
+        <div>
+          <p class="step-label">STEP 1</p>
+          <h2 id="searchHeading">症状から探す</h2>
+        </div>
+        <button id="resetButton" class="text-button" type="button">リセット</button>
+      </div>
+
+      <div class="search-grid">
+        <label>
+          痛みの部位
+          <select id="regionSelect">
+            <option value="">すべての部位</option>
+          </select>
+        </label>
+        <label>
+          痛い・困る動き
+          <select id="movementSelect">
+            <option value="">すべての動き</option>
+          </select>
+        </label>
+      </div>
+      <label>
+        キーワード
+        <input id="keywordInput" type="search" placeholder="例：しびれ、階段、夜間痛" autocomplete="off">
+      </label>
+      <div id="quickRegions" class="chip-row" aria-label="部位のクイック選択"></div>
+    </section>
+
+    <div class="workspace">
+      <section class="panel results-panel" aria-labelledby="resultsHeading">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">STEP 2</p>
+            <h2 id="resultsHeading">候補</h2>
+          </div>
+          <span id="resultCount" class="count-badge"></span>
+        </div>
+        <p class="helper">一致度は入力と検査結果から変化します。高い順でも診断確率ではありません。</p>
+        <div id="candidateList" class="candidate-list"></div>
+      </section>
+
+      <section id="detailPanel" class="panel detail-panel" aria-live="polite"></section>
+    </div>
+  </main>
+
+  <dialog id="editorDialog" class="editor-dialog">
+    <form method="dialog" class="dialog-header">
+      <div>
+        <p class="step-label">LOCAL DATA</p>
+        <h2>データを追加・編集</h2>
+      </div>
+      <button class="icon-button" value="cancel" aria-label="閉じる">×</button>
+    </form>
+    <div class="editor-toolbar">
+      <label>
+        編集する候補
+        <select id="editorItemSelect"></select>
+      </label>
+      <button id="newItemButton" class="button button-secondary" type="button">新規作成</button>
+    </div>
+    <form id="editorForm" class="editor-form">
+      <input id="editId" type="hidden">
+      <label>候補名<input id="editName" required></label>
+      <label>概要<textarea id="editSummary" rows="3" required></textarea></label>
+      <div class="form-grid">
+        <label>部位（カンマ区切り）<input id="editRegions" required></label>
+        <label>動き（カンマ区切り）<input id="editMovements" required></label>
+      </div>
+      <label>特徴・キーワード（カンマ区切り）<input id="editKeywords"></label>
+      <div class="form-grid">
+        <label>筋（カンマ区切り）<input id="editMuscles"></label>
+        <label>関節（カンマ区切り）<input id="editJoints"></label>
+        <label>神経（カンマ区切り）<input id="editNerves"></label>
+      </div>
+      <label>検査（1行ごとに「検査名 | 陽性所見」）<textarea id="editTests" rows="5"></textarea></label>
+      <label>治療候補（1行に1項目）<textarea id="editTreatments" rows="4"></textarea></label>
+      <label>セルフケア（1行に1項目）<textarea id="editSelfCare" rows="4"></textarea></label>
+      <label>注意・紹介目安（1行に1項目）<textarea id="editCautions" rows="3"></textarea></label>
+      <div class="dialog-actions">
+        <button id="deleteItemButton" class="button button-danger" type="button">削除</button>
+        <button class="button button-primary" type="submit">保存</button>
+      </div>
+    </form>
+    <div class="data-actions">
+      <button id="exportButton" class="text-button" type="button">JSONを書き出す</button>
+      <label class="text-button file-label">JSONを読み込む<input id="importInput" type="file" accept="application/json"></label>
+      <button id="restoreButton" class="text-button" type="button">初期データに戻す</button>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
