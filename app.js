@@ -371,9 +371,9 @@ function catalogOptions(kind, subtype) {
 function renderEditableTags(item, property, subtype, listId) {
   const kind = SUBTYPE_TO_KIND[subtype];
   const values = item[property] || [];
-  const tags = values.map(value => `
+  const tags = values.map((value, index) => `
     <span class="entity-pill">
-      <span class="tag">${escapeHtml(value)}</span>
+      <input class="pill-input" data-token-edit="${escapeHtml(property)}" data-token-index="${index}" data-token-subtype="${escapeHtml(subtype)}" list="${escapeHtml(listId)}" value="${escapeHtml(value)}" aria-label="${escapeHtml(value)}">
       <button class="pill-remove" type="button" data-remove-token="${escapeHtml(property)}" data-token-value="${escapeHtml(encodeURIComponent(value))}" aria-label="${escapeHtml(value)}を外す">×</button>
     </span>`).join("");
   return `
@@ -734,6 +734,17 @@ function persistInlineChange() {
   saveClinicalState();
 }
 
+function scheduleDetailSave(handler) {
+  clearTimeout(scheduleDetailSave.timer);
+  scheduleDetailSave.timer = setTimeout(() => {
+    const item = selectedItem();
+    if (!item) return;
+    handler(item);
+    saveItems();
+    saveClinicalState();
+  }, 350);
+}
+
 function addTokenToSelected(property, subtype, value) {
   const item = selectedItem();
   const name = value.trim();
@@ -747,6 +758,32 @@ function addTokenToSelected(property, subtype, value) {
   if (kind && !entityMeta[metaKey(kind, subtype, name)]) {
     entityMeta[metaKey(kind, subtype, name)] = { description: "" };
     saveEntityMeta();
+  }
+  saveItems();
+  render();
+  return true;
+}
+
+function updateSelectedToken(property, subtype, index, value) {
+  const item = selectedItem();
+  const name = value.trim();
+  if (!item || !Array.isArray(item[property]) || !item[property][index]) return false;
+  const oldName = item[property][index];
+  if (!name) {
+    item[property] = item[property].filter((_, entryIndex) => entryIndex !== index);
+  } else if (oldName !== name) {
+    item[property][index] = name;
+    item[property] = unique([item[property]]);
+    const kind = SUBTYPE_TO_KIND[subtype];
+    const oldMeta = kind ? entityMeta[metaKey(kind, subtype, oldName)] : null;
+    if (kind && oldMeta && !entityMeta[metaKey(kind, subtype, name)]) {
+      entityMeta[metaKey(kind, subtype, name)] = oldMeta;
+      saveEntityMeta();
+    }
+  }
+  if (subtype === "region" && name && !customRegions.includes(name) && !unique(items.map(entry => entry.regions)).includes(name)) {
+    customRegions.push(name);
+    saveCustomRegions();
   }
   saveItems();
   render();
@@ -1025,9 +1062,44 @@ elements.detail.addEventListener("keydown", event => {
   }
 });
 
+elements.detail.addEventListener("input", event => {
+  const candidateField = event.target.closest("[data-candidate-field]");
+  if (candidateField) {
+    scheduleDetailSave(item => {
+      item[candidateField.dataset.candidateField] = candidateField.value.trim() || item[candidateField.dataset.candidateField];
+    });
+    return;
+  }
+  const listField = event.target.closest("[data-list-property]");
+  if (listField) {
+    scheduleDetailSave(item => {
+      item[listField.dataset.listProperty] = splitLines(listField.value);
+    });
+    return;
+  }
+  const testField = event.target.closest("[data-test-field]");
+  if (testField) {
+    const card = testField.closest("[data-test-id]");
+    scheduleDetailSave(item => {
+      const test = item.tests.find(entry => entry.id === card?.dataset.testId);
+      if (!test) return;
+      test[testField.dataset.testField] = testField.value.trim() || "登録なし";
+      if (testField.dataset.testField === "finding") {
+        entityMeta[metaKey("test", "test", test.name)] = { description: test.finding };
+        saveEntityMeta();
+      }
+    });
+  }
+});
+
 elements.detail.addEventListener("change", event => {
   const item = selectedItem();
   if (!item) return;
+  const tokenField = event.target.closest("[data-token-edit]");
+  if (tokenField) {
+    updateSelectedToken(tokenField.dataset.tokenEdit, tokenField.dataset.tokenSubtype, Number(tokenField.dataset.tokenIndex), tokenField.value);
+    return;
+  }
   const candidateField = event.target.closest("[data-candidate-field]");
   if (candidateField) {
     const field = candidateField.dataset.candidateField;
