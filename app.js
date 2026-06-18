@@ -165,7 +165,7 @@ const elements = {
 };
 elements.region.value = clinicalState.region || "";
 elements.keyword.value = clinicalState.keyword || "";
-if (clinicalState.clinicalDraft) {
+if (clinicalState.clinicalDraft && elements.clinicalEntityKind) {
   elements.clinicalEntityKind.value = clinicalState.clinicalDraft.kindSubtype || elements.clinicalEntityKind.value;
   elements.clinicalEntityInput.value = clinicalState.clinicalDraft.name || "";
   elements.clinicalEntityDescription.value = clinicalState.clinicalDraft.description || "";
@@ -207,11 +207,11 @@ function saveClinicalState() {
     sfmaResults,
     sfmaBreakoutResults,
     testResults,
-    clinicalDraft: {
-      kindSubtype: elements.clinicalEntityKind?.value || "",
+    clinicalDraft: elements.clinicalEntityKind ? {
+      kindSubtype: elements.clinicalEntityKind.value || "",
       name: elements.clinicalEntityInput?.value || "",
       description: elements.clinicalEntityDescription?.value || ""
-    }
+    } : {}
   };
   localStorage.setItem(CLINICAL_STATE_KEY, JSON.stringify(state));
   if (elements.autosaveStatus) {
@@ -347,7 +347,7 @@ function render() {
       <span class="candidate-top"><span class="candidate-name">${escapeHtml(item.name)}</span><span class="score">関連度 ${displayScore}</span></span>
       <span class="score-track"><span class="score-fill" style="width:${displayScore}%"></span></span>
       <span class="candidate-reason">${reasons.length ? `一致: ${reasons.map(escapeHtml).join(" / ")}` : "検査やキーワードで絞り込めます"}</span>
-    </button>`).join("") : '<p class="empty">候補がありません。データ編集から追加できます。</p>';
+    </button>`).join("") : '<p class="empty">候補がありません。条件を変えるか、各ページから追加できます。</p>';
   const selected = items.find(item => item.id === selectedId);
   elements.detail.innerHTML = selected ? renderDetail(selected) : '<p class="empty">候補を選択してください。</p>';
   renderDirectories();
@@ -355,44 +355,80 @@ function render() {
   saveClinicalState();
 }
 
-function renderEntityPill(value, page = "", directory = "", kind = "", subtype = "") {
-  const encoded = escapeHtml(encodeURIComponent(value));
-  const label = escapeHtml(value);
-  if (!page && !kind) return `<span class="tag">${label}</span>`;
-  return `<span class="entity-pill">
-    ${page ? `<button class="tag link-tag" type="button" data-directory-link="${page}" data-directory-key="${directory}" data-directory-value="${encoded}">${label}</button>` : `<span class="tag">${label}</span>`}
-    ${kind ? `<button class="pill-edit" type="button" data-edit-entity="${kind}" data-entity-subtype="${subtype}" data-entity-name="${encoded}" aria-label="${label}を編集">編集</button>` : ""}
-  </span>`;
+const SUBTYPE_TO_KIND = {
+  region: "symptom", movement: "symptom", keyword: "symptom",
+  muscle: "anatomy", joint: "anatomy", nerve: "anatomy",
+  test: "test", treatment: "treatment", selfCare: "treatment"
+};
+
+function catalogOptions(kind, subtype) {
+  return getEntityCatalog(kind)
+    .filter(entity => entity.subtype === subtype)
+    .map(entity => `<option value="${escapeHtml(entity.name)}"></option>`)
+    .join("");
 }
-function renderTags(values, page = "", directory = "", kind = "", subtype = "") { return values.length ? `<div class="tag-list">${values.map(v => renderEntityPill(v, page, directory, kind, subtype)).join("")}</div>` : '<p class="source-note">登録なし</p>'; }
-function renderList(values, page = "", directory = "", kind = "", subtype = "") { return values.length ? `<ul class="plain-list">${values.map(v => `<li><span class="list-row">${page ? `<button class="text-button inline-link" type="button" data-directory-link="${page}" data-directory-key="${directory}" data-directory-value="${escapeHtml(encodeURIComponent(v))}">${escapeHtml(v)}</button>` : escapeHtml(v)}${kind ? `<button class="text-button inline-link" type="button" data-edit-entity="${kind}" data-entity-subtype="${subtype}" data-entity-name="${escapeHtml(encodeURIComponent(v))}">編集</button>` : ""}</span></li>`).join("")}</ul>` : '<p class="source-note">登録なし</p>'; }
+
+function renderEditableTags(item, property, subtype, listId) {
+  const kind = SUBTYPE_TO_KIND[subtype];
+  const values = item[property] || [];
+  const tags = values.map(value => `
+    <span class="entity-pill">
+      <span class="tag">${escapeHtml(value)}</span>
+      <button class="pill-remove" type="button" data-remove-token="${escapeHtml(property)}" data-token-value="${escapeHtml(encodeURIComponent(value))}" aria-label="${escapeHtml(value)}を外す">×</button>
+    </span>`).join("");
+  return `
+    <div class="tag-list">${tags || '<span class="source-note">登録なし</span>'}</div>
+    <div class="inline-add inline-add-compact">
+      <input data-add-token="${escapeHtml(property)}" data-token-subtype="${escapeHtml(subtype)}" list="${escapeHtml(listId)}" placeholder="追加" autocomplete="off">
+      <button class="button button-secondary" type="button" data-add-token-button="${escapeHtml(property)}">追加</button>
+      <datalist id="${escapeHtml(listId)}">${catalogOptions(kind, subtype)}</datalist>
+    </div>`;
+}
+
+function renderEditableLines(item, property) {
+  return `<textarea class="inline-lines" data-list-property="${escapeHtml(property)}" rows="4">${escapeHtml((item[property] || []).join("\n"))}</textarea>`;
+}
 
 function renderDetail(item) {
   return `
-    <div class="detail-hero"><p class="step-label">STEP 3</p><h2>${escapeHtml(item.name)}</h2><p>${escapeHtml(item.summary)}</p><button class="button button-secondary" type="button" data-edit-candidate="${escapeHtml(item.id)}">この候補を編集</button></div>
+    <div class="detail-hero">
+      <p class="step-label">STEP 3</p>
+      <input class="inline-title" data-candidate-field="name" value="${escapeHtml(item.name)}" aria-label="候補名">
+      <textarea class="inline-summary" data-candidate-field="summary" rows="3" aria-label="概要">${escapeHtml(item.summary)}</textarea>
+    </div>
     <section class="detail-section"><h3>関連する部位・症状</h3>
-      <h3>部位</h3>${renderTags(item.regions, "symptoms", "symptoms", "symptom", "region")}
-      <h3>動作・活動</h3>${renderTags(item.movements, "symptoms", "symptoms", "symptom", "movement")}
-      <h3>症状・特徴</h3>${renderTags(item.keywords, "symptoms", "symptoms", "symptom", "keyword")}
+      <h3>部位</h3>${renderEditableTags(item, "regions", "region", `region-options-${item.id}`)}
+      <h3>動作・活動</h3>${renderEditableTags(item, "movements", "movement", `movement-options-${item.id}`)}
+      <h3>症状・特徴</h3>${renderEditableTags(item, "keywords", "keyword", `keyword-options-${item.id}`)}
     </section>
     <section class="detail-section"><h3>関連する筋・関節・神経</h3><div class="anatomy-grid">
-      <div class="anatomy-box"><h3>筋</h3>${renderTags(item.muscles, "anatomy", "anatomy", "anatomy", "muscle")}</div>
-      <div class="anatomy-box"><h3>関節・組織</h3>${renderTags(item.joints, "anatomy", "anatomy", "anatomy", "joint")}</div>
-      <div class="anatomy-box"><h3>神経</h3>${renderTags(item.nerves, "anatomy", "anatomy", "anatomy", "nerve")}</div>
+      <div class="anatomy-box"><h3>筋</h3>${renderEditableTags(item, "muscles", "muscle", `muscle-options-${item.id}`)}</div>
+      <div class="anatomy-box"><h3>関節・組織</h3>${renderEditableTags(item, "joints", "joint", `joint-options-${item.id}`)}</div>
+      <div class="anatomy-box"><h3>神経</h3>${renderEditableTags(item, "nerves", "nerve", `nerve-options-${item.id}`)}</div>
     </div></section>
     <section class="detail-section"><h3>検査項目</h3><p class="helper">結果を選ぶと全候補の関連度を再計算します。検査は病歴・神経学的所見などと組み合わせて解釈してください。</p><div class="test-list">
       ${item.tests.map(test => { const key = `${item.id}:${test.id}`; const current = testResults[key] || "unknown"; return `
-        <article class="test-card"><h3><span class="list-row"><button class="text-button inline-link" type="button" data-directory-link="tests" data-directory-key="tests" data-directory-value="${escapeHtml(encodeURIComponent(test.name))}">${escapeHtml(test.name)}</button><button class="text-button inline-link" type="button" data-edit-entity="test" data-entity-subtype="test" data-entity-name="${escapeHtml(encodeURIComponent(test.name))}">編集</button></span></h3><p>陽性の目安: ${escapeHtml(test.finding)}</p>
+        <article class="test-card" data-test-id="${escapeHtml(test.id)}">
+          <div class="test-card-head">
+            <input class="inline-test-name" data-test-field="name" value="${escapeHtml(test.name)}" list="test-options-${item.id}" aria-label="検査名">
+            <button class="pill-remove" type="button" data-remove-test="${escapeHtml(test.id)}" aria-label="${escapeHtml(test.name)}を外す">×</button>
+          </div>
+          <textarea class="inline-finding" data-test-field="finding" rows="2" aria-label="陽性の目安">${escapeHtml(test.finding)}</textarea>
           <div class="segmented" data-test-key="${escapeHtml(key)}">
             <button type="button" data-result="positive" class="${current === "positive" ? "active" : ""}">陽性</button>
             <button type="button" data-result="negative" class="${current === "negative" ? "active" : ""}">陰性</button>
             <button type="button" data-result="unknown" class="${current === "unknown" ? "active" : ""}">未実施</button>
           </div>
         </article>`; }).join("")}
+      <div class="inline-add inline-add-compact">
+        <input data-add-test-input list="test-options-${item.id}" placeholder="検査を追加" autocomplete="off">
+        <button class="button button-secondary" type="button" data-add-test-button>追加</button>
+        <datalist id="test-options-${item.id}">${catalogOptions("test", "test")}</datalist>
+      </div>
     </div></section>
-    <section class="detail-section"><h3>治療候補</h3>${renderList(item.treatments, "treatments", "treatments", "treatment", "treatment")}</section>
-    <section class="detail-section"><h3>セルフケア候補</h3>${renderList(item.selfCare, "treatments", "treatments", "treatment", "selfCare")}</section>
-    <section class="detail-section"><div class="caution-box"><h3>注意・紹介の目安</h3>${renderList(item.cautions)}</div></section>
+    <section class="detail-section"><h3>治療候補</h3>${renderEditableLines(item, "treatments")}</section>
+    <section class="detail-section"><h3>セルフケア候補</h3>${renderEditableLines(item, "selfCare")}</section>
+    <section class="detail-section"><div class="caution-box"><h3>注意・紹介の目安</h3>${renderEditableLines(item, "cautions")}</div></section>
     <p class="source-note">表示内容は教育・臨床推論支援用の初期データです。個別の診断・治療指示ではありません。</p>`;
 }
 
@@ -479,6 +515,10 @@ function getEntityCatalog(kind) {
     }
   });
   if (kind === "symptom") customRegions.forEach(name => add(name, "region", null));
+  Object.keys(entityMeta).forEach(key => {
+    const [metaKind, subtype, name] = key.split("|");
+    if (metaKind === kind) add(name, subtype, null, entityMeta[key]?.description || "");
+  });
   return [...map.values()].map(entity => ({
     ...entity,
     description: entityMeta[metaKey(kind, entity.subtype, entity.name)]?.description || entity.description
@@ -487,6 +527,14 @@ function getEntityCatalog(kind) {
 
 function subtypeLabel(kind, subtype) {
   return ENTITY_TYPES[kind]?.find(type => type.value === subtype)?.label || subtype;
+}
+
+function renderEntityRelations(entity) {
+  return items.map(item => `
+    <label class="relation-option">
+      <input type="checkbox" data-directory-relation="${escapeHtml(item.id)}" ${entityHasRelation(item, entity.subtype, entity.name) ? "checked" : ""}>
+      <span>${escapeHtml(item.name)}</span>
+    </label>`).join("");
 }
 
 function renderDirectory(kind, targetId, searchKey) {
@@ -498,13 +546,15 @@ function renderDirectory(kind, targetId, searchKey) {
     return `${entity.name} ${entity.description} ${conditionNames}`.toLowerCase().includes(query);
   });
   target.innerHTML = entities.length ? entities.map(entity => {
-    const related = entity.conditionIds.map(id => items.find(item => item.id === id)).filter(Boolean);
-    return `<article class="directory-card">
-      <div><span class="tag">${escapeHtml(subtypeLabel(kind, entity.subtype))}</span></div>
-      <h3>${escapeHtml(entity.name)}</h3>
-      ${entity.description ? `<p>${escapeHtml(entity.description)}</p>` : '<p>説明は未登録です。</p>'}
-      <div class="directory-meta">${related.length ? related.map(item => `<button class="tag link-tag" type="button" data-open-condition="${escapeHtml(item.id)}">${escapeHtml(item.name)}</button>`).join("") : '<span class="source-note">関連候補なし</span>'}</div>
-      <button class="button button-secondary" type="button" data-edit-entity="${kind}" data-entity-subtype="${entity.subtype}" data-entity-name="${escapeHtml(encodeURIComponent(entity.name))}">編集</button>
+    const key = escapeHtml(encodeURIComponent(`${kind}|${entity.subtype}|${entity.name}`));
+    return `<article class="directory-card directory-edit-card" data-directory-entity="${key}">
+      <select class="directory-subtype-input" data-directory-subtype aria-label="分類">
+        ${ENTITY_TYPES[kind].map(type => `<option value="${type.value}" ${type.value === entity.subtype ? "selected" : ""}>${escapeHtml(type.label)}</option>`).join("")}
+      </select>
+      <input class="directory-name-input" data-directory-name value="${escapeHtml(entity.name)}" aria-label="${escapeHtml(subtypeLabel(kind, entity.subtype))}名">
+      <textarea class="directory-description-input" data-directory-description rows="3" aria-label="説明">${escapeHtml(entity.description || "")}</textarea>
+      <div class="relation-grid directory-relation-grid">${renderEntityRelations(entity)}</div>
+      <button class="text-button directory-delete" type="button" data-directory-delete>削除</button>
     </article>`;
   }).join("") : '<p class="empty panel">該当するデータがありません。</p>';
 }
@@ -524,7 +574,7 @@ function entityHasRelation(item, subtype, name) {
 
 function openEntityEditor(kind, subtype = ENTITY_TYPES[kind][0].value, name = "") {
   const entity = getEntityCatalog(kind).find(entry => entry.subtype === subtype && entry.name === name);
-  $("#entityDialogTitle").textContent = `${kind === "symptom" ? "症状・部位" : kind === "anatomy" ? "解剖" : kind === "test" ? "検査" : "治療"}を編集`;
+  $("#entityDialogTitle").textContent = kind === "symptom" ? "症状・部位" : kind === "anatomy" ? "解剖" : kind === "test" ? "検査" : "治療";
   $("#entityKind").value = kind;
   $("#entityOriginalName").value = name;
   $("#entityOriginalSubtype").value = subtype;
@@ -553,6 +603,84 @@ function addEntityReference(item, subtype, name, description) {
   }
   const property = { region: "regions", movement: "movements", keyword: "keywords", muscle: "muscles", joint: "joints", nerve: "nerves", treatment: "treatments", selfCare: "selfCare" }[subtype];
   if (property && !item[property].includes(name)) item[property].push(name);
+}
+
+function parseDirectoryEntity(card) {
+  const [kind, subtype, name] = decodeURIComponent(card.dataset.directoryEntity || "").split("|");
+  return { kind, subtype, name };
+}
+
+function renameEntityEverywhere(kind, subtype, oldName, newName) {
+  if (!newName || oldName === newName) return;
+  items.forEach(item => {
+    if (subtype === "test") {
+      item.tests.forEach(test => { if (test.name === oldName) test.name = newName; });
+      return;
+    }
+    const property = { region: "regions", movement: "movements", keyword: "keywords", muscle: "muscles", joint: "joints", nerve: "nerves", treatment: "treatments", selfCare: "selfCare" }[subtype];
+    if (property) item[property] = item[property].map(value => value === oldName ? newName : value);
+  });
+  if (subtype === "region") customRegions = customRegions.map(value => value === oldName ? newName : value);
+  const oldKey = metaKey(kind, subtype, oldName);
+  const oldMeta = entityMeta[oldKey];
+  if (oldMeta) {
+    entityMeta[metaKey(kind, subtype, newName)] = oldMeta;
+    delete entityMeta[oldKey];
+  }
+  saveItems();
+  saveCustomRegions();
+  saveEntityMeta();
+}
+
+function moveEntitySubtype(kind, oldSubtype, name, newSubtype) {
+  if (!newSubtype || oldSubtype === newSubtype) return;
+  const description = entityMeta[metaKey(kind, oldSubtype, name)]?.description || "";
+  items.forEach(item => {
+    if (entityHasRelation(item, oldSubtype, name)) {
+      removeEntityReference(item, oldSubtype, name);
+      addEntityReference(item, newSubtype, name, description);
+    }
+  });
+  if (oldSubtype === "region") customRegions = customRegions.filter(region => region !== name);
+  if (newSubtype === "region" && !customRegions.includes(name)) customRegions.push(name);
+  delete entityMeta[metaKey(kind, oldSubtype, name)];
+  entityMeta[metaKey(kind, newSubtype, name)] = { description };
+  saveItems();
+  saveCustomRegions();
+  saveEntityMeta();
+}
+
+function updateEntityDescription(kind, subtype, name, description) {
+  entityMeta[metaKey(kind, subtype, name)] = { description };
+  if (subtype === "test") {
+    items.forEach(item => item.tests.forEach(test => {
+      if (test.name === name) test.finding = description || "登録なし";
+    }));
+    saveItems();
+  }
+  saveEntityMeta();
+}
+
+function setEntityRelation(conditionId, subtype, name, description, linked) {
+  const item = items.find(entry => entry.id === conditionId);
+  if (!item) return;
+  if (linked) addEntityReference(item, subtype, name, description);
+  else removeEntityReference(item, subtype, name);
+  saveItems();
+}
+
+function addDirectoryEntity(kind, searchKey) {
+  const search = document.querySelector(`[data-directory-search="${searchKey}"]`);
+  const name = (search?.value || "").trim();
+  if (!name) return;
+  const subtype = ENTITY_TYPES[kind][0].value;
+  entityMeta[metaKey(kind, subtype, name)] = entityMeta[metaKey(kind, subtype, name)] || { description: "" };
+  if (kind === "symptom" && subtype === "region" && !customRegions.includes(name)) {
+    customRegions.push(name);
+    saveCustomRegions();
+  }
+  saveEntityMeta();
+  render();
 }
 
 function switchPage(page) {
@@ -595,17 +723,60 @@ function addClinicalEntityToSelected() {
   showToast(`「${name}」を選択中の候補に追加しました`);
 }
 
+function selectedItem() {
+  return items.find(item => item.id === selectedId);
+}
+
+function persistInlineChange() {
+  saveItems();
+  renderDirectories();
+  populateFilters();
+  saveClinicalState();
+}
+
+function addTokenToSelected(property, subtype, value) {
+  const item = selectedItem();
+  const name = value.trim();
+  if (!item || !name) return false;
+  if (!item[property].includes(name)) item[property].push(name);
+  if (subtype === "region" && !customRegions.includes(name) && !unique(items.map(entry => entry.regions)).includes(name)) {
+    customRegions.push(name);
+    saveCustomRegions();
+  }
+  const kind = SUBTYPE_TO_KIND[subtype];
+  if (kind && !entityMeta[metaKey(kind, subtype, name)]) {
+    entityMeta[metaKey(kind, subtype, name)] = { description: "" };
+    saveEntityMeta();
+  }
+  saveItems();
+  render();
+  return true;
+}
+
+function addTestToSelected(name) {
+  const item = selectedItem();
+  const testName = name.trim();
+  if (!item || !testName) return false;
+  const existing = getEntityCatalog("test").find(entity => entity.name === testName);
+  if (!item.tests.some(test => test.name === testName)) {
+    item.tests.push({ id: slugify(testName), name: testName, finding: existing?.description || "登録なし" });
+    saveItems();
+    render();
+  }
+  return true;
+}
+
 elements.region.addEventListener("change", render);
 elements.keyword.addEventListener("input", render);
-elements.clinicalEntityKind.addEventListener("change", () => {
+elements.clinicalEntityKind?.addEventListener("change", () => {
   elements.clinicalEntityInput.value = "";
   elements.clinicalEntityDescription.value = "";
   renderClinicalEntitySuggestions();
   saveClinicalState();
 });
-elements.clinicalEntityInput.addEventListener("input", () => { renderClinicalEntitySuggestions(); saveClinicalState(); });
-elements.clinicalEntityDescription.addEventListener("input", saveClinicalState);
-elements.clinicalEntitySuggestions.addEventListener("click", event => {
+elements.clinicalEntityInput?.addEventListener("input", () => { renderClinicalEntitySuggestions(); saveClinicalState(); });
+elements.clinicalEntityDescription?.addEventListener("input", saveClinicalState);
+elements.clinicalEntitySuggestions?.addEventListener("click", event => {
   const button = event.target.closest("[data-clinical-suggestion]");
   if (!button) return;
   elements.clinicalEntityInput.value = decodeURIComponent(button.dataset.clinicalSuggestion);
@@ -613,8 +784,8 @@ elements.clinicalEntitySuggestions.addEventListener("click", event => {
   renderClinicalEntitySuggestions();
   saveClinicalState();
 });
-elements.addClinicalEntity.addEventListener("click", addClinicalEntityToSelected);
-elements.editClinicalEntity.addEventListener("click", () => {
+elements.addClinicalEntity?.addEventListener("click", addClinicalEntityToSelected);
+elements.editClinicalEntity?.addEventListener("click", () => {
   const { kind, subtype, name } = getClinicalEntitySelection();
   if (!name) return;
   openEntityEditor(kind, subtype, name);
@@ -657,20 +828,13 @@ elements.newRegion.addEventListener("keydown", event => {
 document.addEventListener("click", event => {
   const nav = event.target.closest("[data-page]");
   if (nav) { switchPage(nav.dataset.page); return; }
+  const directoryAddButton = event.target.closest("[data-directory-add]");
+  if (directoryAddButton) {
+    addDirectoryEntity(directoryAddButton.dataset.directoryAdd, directoryAddButton.dataset.directorySearchSource);
+    return;
+  }
   const addButton = event.target.closest("[data-add-entity]");
   if (addButton) { openEntityEditor(addButton.dataset.addEntity); return; }
-  const candidateEditButton = event.target.closest("[data-edit-candidate]");
-  if (candidateEditButton) {
-    selectedId = candidateEditButton.dataset.editCandidate;
-    refreshEditorSelect(selectedId);
-    elements.dialog.showModal();
-    return;
-  }
-  const editButton = event.target.closest("[data-edit-entity]");
-  if (editButton) {
-    openEntityEditor(editButton.dataset.editEntity, editButton.dataset.entitySubtype, decodeURIComponent(editButton.dataset.entityName));
-    return;
-  }
   const conditionButton = event.target.closest("[data-open-condition]");
   if (conditionButton) {
     selectedId = conditionButton.dataset.openCondition;
@@ -689,6 +853,65 @@ document.addEventListener("click", event => {
   }
 });
 document.querySelectorAll("[data-directory-search]").forEach(input => input.addEventListener("input", renderDirectories));
+document.querySelectorAll(".directory-grid").forEach(grid => {
+  grid.addEventListener("change", event => {
+    const card = event.target.closest("[data-directory-entity]");
+    if (!card) return;
+    const entity = parseDirectoryEntity(card);
+    const subtypeInput = event.target.closest("[data-directory-subtype]");
+    if (subtypeInput) {
+      moveEntitySubtype(entity.kind, entity.subtype, entity.name, subtypeInput.value);
+      render();
+      return;
+    }
+    const nameInput = event.target.closest("[data-directory-name]");
+    if (nameInput) {
+      const newName = nameInput.value.trim();
+      if (!newName) { nameInput.value = entity.name; return; }
+      renameEntityEverywhere(entity.kind, entity.subtype, entity.name, newName);
+      const search = event.target.closest("[data-page-panel]")?.querySelector("[data-directory-search]");
+      if (search && search.value.trim() === entity.name) search.value = newName;
+      render();
+      return;
+    }
+    const descriptionInput = event.target.closest("[data-directory-description]");
+    if (descriptionInput) {
+      updateEntityDescription(entity.kind, entity.subtype, entity.name, descriptionInput.value.trim());
+      render();
+      return;
+    }
+    const relationInput = event.target.closest("[data-directory-relation]");
+    if (relationInput) {
+      const description = card.querySelector("[data-directory-description]")?.value.trim() || "";
+      setEntityRelation(relationInput.dataset.directoryRelation, entity.subtype, entity.name, description, relationInput.checked);
+      render();
+    }
+  });
+
+  grid.addEventListener("click", event => {
+    const deleteButton = event.target.closest("[data-directory-delete]");
+    if (!deleteButton) return;
+    const card = deleteButton.closest("[data-directory-entity]");
+    const entity = parseDirectoryEntity(card);
+    if (!entity.name || !confirm(`「${entity.name}」をすべての関連候補から削除しますか？`)) return;
+    items.forEach(item => removeEntityReference(item, entity.subtype, entity.name));
+    if (entity.subtype === "region") {
+      customRegions = customRegions.filter(region => region !== entity.name);
+      saveCustomRegions();
+    }
+    delete entityMeta[metaKey(entity.kind, entity.subtype, entity.name)];
+    saveEntityMeta();
+    saveItems();
+    render();
+  });
+});
+document.querySelectorAll("[data-directory-search]").forEach(input => input.addEventListener("keydown", event => {
+  if (event.key !== "Enter") return;
+  const button = document.querySelector(`[data-directory-search-source="${input.dataset.directorySearch}"]`);
+  if (!button) return;
+  event.preventDefault();
+  addDirectoryEntity(button.dataset.directoryAdd, button.dataset.directorySearchSource);
+}));
 $("#entitySubtype").addEventListener("change", () => {
   const kind = $("#entityKind").value;
   const originalName = $("#entityOriginalName").value;
@@ -747,10 +970,93 @@ elements.candidates.addEventListener("click", event => {
 });
 elements.detail.addEventListener("click", event => {
   const button = event.target.closest("[data-result]");
-  if (!button) return;
-  const group = button.closest("[data-test-key]");
-  testResults[group.dataset.testKey] = button.dataset.result;
-  render();
+  if (button) {
+    const group = button.closest("[data-test-key]");
+    testResults[group.dataset.testKey] = button.dataset.result;
+    render();
+    return;
+  }
+  const removeToken = event.target.closest("[data-remove-token]");
+  if (removeToken) {
+    const item = selectedItem();
+    const property = removeToken.dataset.removeToken;
+    const value = decodeURIComponent(removeToken.dataset.tokenValue);
+    if (!item || !Array.isArray(item[property])) return;
+    item[property] = item[property].filter(entry => entry !== value);
+    saveItems();
+    render();
+    return;
+  }
+  const addToken = event.target.closest("[data-add-token-button]");
+  if (addToken) {
+    const input = elements.detail.querySelector(`[data-add-token="${CSS.escape(addToken.dataset.addTokenButton)}"]`);
+    if (input && addTokenToSelected(addToken.dataset.addTokenButton, input.dataset.tokenSubtype, input.value)) input.value = "";
+    return;
+  }
+  const removeTest = event.target.closest("[data-remove-test]");
+  if (removeTest) {
+    const item = selectedItem();
+    if (!item) return;
+    item.tests = item.tests.filter(test => test.id !== removeTest.dataset.removeTest);
+    saveItems();
+    render();
+    return;
+  }
+  const addTest = event.target.closest("[data-add-test-button]");
+  if (addTest) {
+    const input = elements.detail.querySelector("[data-add-test-input]");
+    if (input && addTestToSelected(input.value)) input.value = "";
+  }
+});
+
+elements.detail.addEventListener("keydown", event => {
+  const tokenInput = event.target.closest("[data-add-token]");
+  if (tokenInput && (event.key === "Enter" || event.key === ",")) {
+    event.preventDefault();
+    addTokenToSelected(tokenInput.dataset.addToken, tokenInput.dataset.tokenSubtype, tokenInput.value);
+    tokenInput.value = "";
+    return;
+  }
+  const testInput = event.target.closest("[data-add-test-input]");
+  if (testInput && event.key === "Enter") {
+    event.preventDefault();
+    addTestToSelected(testInput.value);
+    testInput.value = "";
+  }
+});
+
+elements.detail.addEventListener("change", event => {
+  const item = selectedItem();
+  if (!item) return;
+  const candidateField = event.target.closest("[data-candidate-field]");
+  if (candidateField) {
+    const field = candidateField.dataset.candidateField;
+    item[field] = candidateField.value.trim() || item[field];
+    saveItems();
+    render();
+    return;
+  }
+  const listField = event.target.closest("[data-list-property]");
+  if (listField) {
+    item[listField.dataset.listProperty] = splitLines(listField.value);
+    saveItems();
+    render();
+    return;
+  }
+  const testField = event.target.closest("[data-test-field]");
+  if (testField) {
+    const card = testField.closest("[data-test-id]");
+    const test = item.tests.find(entry => entry.id === card?.dataset.testId);
+    if (!test) return;
+    test[testField.dataset.testField] = testField.value.trim() || "登録なし";
+    if (testField.dataset.testField === "finding") {
+      entityMeta[metaKey("test", "test", test.name)] = { description: test.finding };
+      saveEntityMeta();
+    }
+    saveItems();
+    renderDirectories();
+    saveClinicalState();
+  }
 });
 elements.reset.addEventListener("click", () => {
   elements.region.value = ""; elements.keyword.value = ""; selectedMovements.clear(); sfmaResults = {}; sfmaBreakoutResults = {}; testResults = {}; render();
@@ -805,7 +1111,7 @@ $("#importInput").addEventListener("change", async event => {
   event.target.value = "";
 });
 $("#restoreButton").addEventListener("click", () => {
-  if (!confirm("追加・編集した内容を破棄して初期データに戻しますか？")) return;
+  if (!confirm("追加・変更した内容を破棄して初期データに戻しますか？")) return;
   items = structuredClone(seedData); customRegions = []; entityMeta = {}; selectedId = items[0].id; testResults = {}; selectedMovements.clear(); sfmaResults = {}; sfmaBreakoutResults = {}; saveItems(); saveCustomRegions(); saveEntityMeta(); saveClinicalState(); refreshEditorSelect(); render(); showToast("初期データに戻しました");
 });
 
