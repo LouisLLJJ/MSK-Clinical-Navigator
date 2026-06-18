@@ -1,6 +1,7 @@
 const STORAGE_KEY = "msk-clinical-navigator-data-v1";
 const CUSTOM_REGIONS_KEY = "msk-clinical-navigator-custom-regions-v1";
 const ENTITY_META_KEY = "msk-clinical-navigator-entity-meta-v1";
+const CLINICAL_STATE_KEY = "msk-clinical-navigator-clinical-state-v1";
 const SFMA_PATTERNS = [
   { id: "cervical-flexion", label: "頸部屈曲", group: "cervical" },
   { id: "cervical-extension", label: "頸部伸展", group: "cervical" },
@@ -8,6 +9,17 @@ const SFMA_PATTERNS = [
   { id: "cervical-rotation-left", label: "頸部回旋（左）", group: "cervical" },
   { id: "multi-segmental-flexion", label: "多分節屈曲", group: "multisegmental" },
   { id: "multi-segmental-extension", label: "多分節伸展", group: "multisegmental" }
+];
+const SFMA_BREAKOUTS = [
+  { id: "breakout-upper-cervical", label: "頸椎上部", group: "cervical" },
+  { id: "breakout-lower-cervical", label: "頸椎下部", group: "cervical" },
+  { id: "breakout-thoracic", label: "胸椎", group: "multisegmental" },
+  { id: "breakout-scapulothoracic", label: "肩甲胸郭", group: "cervical" },
+  { id: "breakout-glenohumeral", label: "肩関節", group: "cervical" },
+  { id: "breakout-lumbar", label: "腰椎", group: "multisegmental" },
+  { id: "breakout-hip", label: "股関節", group: "multisegmental" },
+  { id: "breakout-knee", label: "膝", group: "multisegmental" },
+  { id: "breakout-ankle", label: "足関節", group: "multisegmental" }
 ];
 
 const seedData = [
@@ -128,10 +140,12 @@ const seedData = [
 ];
 
 let items = loadItems();
-let selectedId = items[0]?.id ?? null;
-let testResults = {};
-let selectedMovements = new Set();
-let sfmaResults = {};
+let clinicalState = loadClinicalState();
+let selectedId = clinicalState.selectedId && items.some(item => item.id === clinicalState.selectedId) ? clinicalState.selectedId : items[0]?.id ?? null;
+let testResults = clinicalState.testResults || {};
+let selectedMovements = new Set(clinicalState.selectedMovements || []);
+let sfmaResults = clinicalState.sfmaResults || {};
+let sfmaBreakoutResults = clinicalState.sfmaBreakoutResults || {};
 let customRegions = loadCustomRegions();
 let entityMeta = loadEntityMeta();
 
@@ -139,12 +153,23 @@ const $ = (selector) => document.querySelector(selector);
 const elements = {
   region: $("#regionSelect"), movementChoices: $("#movementChoices"), keyword: $("#keywordInput"),
   newRegion: $("#newRegionInput"), addRegion: $("#addRegionButton"), sfma: $("#sfmaInputs"),
+  sfmaBreakouts: $("#sfmaBreakoutInputs"), autosaveStatus: $("#autosaveStatus"),
+  clinicalEntityKind: $("#clinicalEntityKind"), clinicalEntityInput: $("#clinicalEntityInput"),
+  clinicalEntityDescription: $("#clinicalEntityDescription"), clinicalEntitySuggestions: $("#clinicalEntitySuggestions"),
+  addClinicalEntity: $("#addClinicalEntityButton"), editClinicalEntity: $("#editClinicalEntityButton"),
   quickRegions: $("#quickRegions"), candidates: $("#candidateList"), count: $("#resultCount"),
   detail: $("#detailPanel"), reset: $("#resetButton"), openEditor: $("#openEditorButton"),
   dialog: $("#editorDialog"), editorSelect: $("#editorItemSelect"), editorForm: $("#editorForm"),
   newItem: $("#newItemButton"), deleteItem: $("#deleteItemButton"), toast: $("#toast"),
   entityDialog: $("#entityDialog"), entityForm: $("#entityForm"), entityRelations: $("#entityRelations")
 };
+elements.region.value = clinicalState.region || "";
+elements.keyword.value = clinicalState.keyword || "";
+if (clinicalState.clinicalDraft) {
+  elements.clinicalEntityKind.value = clinicalState.clinicalDraft.kindSubtype || elements.clinicalEntityKind.value;
+  elements.clinicalEntityInput.value = clinicalState.clinicalDraft.name || "";
+  elements.clinicalEntityDescription.value = clinicalState.clinicalDraft.description || "";
+}
 
 function loadItems() {
   try {
@@ -165,9 +190,36 @@ function loadEntityMeta() {
   catch { return {}; }
 }
 
+function loadClinicalState() {
+  try { return JSON.parse(localStorage.getItem(CLINICAL_STATE_KEY)) || {}; }
+  catch { return {}; }
+}
+
 function saveItems() { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
 function saveCustomRegions() { localStorage.setItem(CUSTOM_REGIONS_KEY, JSON.stringify(customRegions)); }
 function saveEntityMeta() { localStorage.setItem(ENTITY_META_KEY, JSON.stringify(entityMeta)); }
+function saveClinicalState() {
+  const state = {
+    selectedId,
+    region: elements.region?.value || "",
+    keyword: elements.keyword?.value || "",
+    selectedMovements: [...selectedMovements],
+    sfmaResults,
+    sfmaBreakoutResults,
+    testResults,
+    clinicalDraft: {
+      kindSubtype: elements.clinicalEntityKind?.value || "",
+      name: elements.clinicalEntityInput?.value || "",
+      description: elements.clinicalEntityDescription?.value || ""
+    }
+  };
+  localStorage.setItem(CLINICAL_STATE_KEY, JSON.stringify(state));
+  if (elements.autosaveStatus) {
+    elements.autosaveStatus.textContent = "保存済み";
+    clearTimeout(saveClinicalState.timer);
+    saveClinicalState.timer = setTimeout(() => { elements.autosaveStatus.textContent = "自動保存"; }, 1200);
+  }
+}
 function unique(values) { return [...new Set(values.flat().filter(Boolean))].sort((a, b) => a.localeCompare(b, "ja")); }
 function splitComma(value) { return value.split(/[、,]/).map(v => v.trim()).filter(Boolean); }
 function splitLines(value) { return value.split(/\r?\n/).map(v => v.trim()).filter(Boolean); }
@@ -195,6 +247,16 @@ function populateFilters() {
         <option value="DP" ${sfmaResults[pattern.id] === "DP" ? "selected" : ""}>DP</option>
       </select>
     </label>`).join("");
+  elements.sfmaBreakouts.innerHTML = SFMA_BREAKOUTS.map(pattern => `
+    <label class="sfma-item">${escapeHtml(pattern.label)}
+      <select data-sfma-breakout-id="${pattern.id}">
+        <option value="">未入力</option>
+        <option value="FN" ${sfmaBreakoutResults[pattern.id] === "FN" ? "selected" : ""}>FN</option>
+        <option value="FP" ${sfmaBreakoutResults[pattern.id] === "FP" ? "selected" : ""}>FP</option>
+        <option value="DN" ${sfmaBreakoutResults[pattern.id] === "DN" ? "selected" : ""}>DN</option>
+        <option value="DP" ${sfmaBreakoutResults[pattern.id] === "DP" ? "selected" : ""}>DP</option>
+      </select>
+    </label>`).join("");
 }
 
 function getSfmaScore(item) {
@@ -209,6 +271,15 @@ function getSfmaScore(item) {
     if (!relevant) return;
     if (result === "FP" || result === "DP") score += 7;
     if (result === "DN") score += 3;
+    reasons.push(`${pattern.label} ${result}`);
+  });
+  SFMA_BREAKOUTS.forEach(pattern => {
+    const result = sfmaBreakoutResults[pattern.id];
+    if (!result || result === "FN") return;
+    const relevant = pattern.group === "cervical" ? cervicalRelevant : multisegmentalRelevant;
+    if (!relevant) return;
+    if (result === "FP" || result === "DP") score += 5;
+    if (result === "DN") score += 2;
     reasons.push(`${pattern.label} ${result}`);
   });
   return { score, reasons };
@@ -280,6 +351,8 @@ function render() {
   const selected = items.find(item => item.id === selectedId);
   elements.detail.innerHTML = selected ? renderDetail(selected) : '<p class="empty">候補を選択してください。</p>';
   renderDirectories();
+  renderClinicalEntitySuggestions();
+  saveClinicalState();
 }
 
 function renderEntityPill(value, page = "", directory = "", kind = "", subtype = "") {
@@ -488,8 +561,64 @@ function switchPage(page) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function getClinicalEntitySelection() {
+  const [kind, subtype] = elements.clinicalEntityKind.value.split("|");
+  return { kind, subtype, name: elements.clinicalEntityInput.value.trim(), description: elements.clinicalEntityDescription.value.trim() };
+}
+
+function renderClinicalEntitySuggestions() {
+  if (!elements.clinicalEntitySuggestions) return;
+  const { kind, subtype } = getClinicalEntitySelection();
+  const query = elements.clinicalEntityInput.value.trim().toLowerCase();
+  const suggestions = getEntityCatalog(kind)
+    .filter(entity => entity.subtype === subtype)
+    .filter(entity => !query || `${entity.name} ${entity.description}`.toLowerCase().includes(query))
+    .slice(0, 10);
+  elements.clinicalEntitySuggestions.innerHTML = suggestions.map(entity => `<button class="suggestion-button" type="button" data-clinical-suggestion="${escapeHtml(encodeURIComponent(entity.name))}" data-clinical-description="${escapeHtml(encodeURIComponent(entity.description || ""))}">${escapeHtml(entity.name)}</button>`).join("");
+}
+
+function addClinicalEntityToSelected() {
+  const selected = items.find(item => item.id === selectedId);
+  const { kind, subtype, name, description } = getClinicalEntitySelection();
+  if (!selected || !name) return;
+  addEntityReference(selected, subtype, name, description);
+  if (kind === "symptom" && subtype === "region" && !customRegions.includes(name) && !unique(items.map(item => item.regions)).includes(name)) {
+    customRegions.push(name);
+    saveCustomRegions();
+  }
+  if (description) {
+    entityMeta[metaKey(kind, subtype, name)] = { description };
+    saveEntityMeta();
+  }
+  saveItems();
+  render();
+  showToast(`「${name}」を選択中の候補に追加しました`);
+}
+
 elements.region.addEventListener("change", render);
 elements.keyword.addEventListener("input", render);
+elements.clinicalEntityKind.addEventListener("change", () => {
+  elements.clinicalEntityInput.value = "";
+  elements.clinicalEntityDescription.value = "";
+  renderClinicalEntitySuggestions();
+  saveClinicalState();
+});
+elements.clinicalEntityInput.addEventListener("input", () => { renderClinicalEntitySuggestions(); saveClinicalState(); });
+elements.clinicalEntityDescription.addEventListener("input", saveClinicalState);
+elements.clinicalEntitySuggestions.addEventListener("click", event => {
+  const button = event.target.closest("[data-clinical-suggestion]");
+  if (!button) return;
+  elements.clinicalEntityInput.value = decodeURIComponent(button.dataset.clinicalSuggestion);
+  elements.clinicalEntityDescription.value = decodeURIComponent(button.dataset.clinicalDescription || "");
+  renderClinicalEntitySuggestions();
+  saveClinicalState();
+});
+elements.addClinicalEntity.addEventListener("click", addClinicalEntityToSelected);
+elements.editClinicalEntity.addEventListener("click", () => {
+  const { kind, subtype, name } = getClinicalEntitySelection();
+  if (!name) return;
+  openEntityEditor(kind, subtype, name);
+});
 elements.movementChoices.addEventListener("change", event => {
   const input = event.target.closest('input[type="checkbox"]');
   if (!input) return;
@@ -500,6 +629,12 @@ elements.sfma.addEventListener("change", event => {
   const select = event.target.closest("[data-sfma-id]");
   if (!select) return;
   if (select.value) sfmaResults[select.dataset.sfmaId] = select.value; else delete sfmaResults[select.dataset.sfmaId];
+  render();
+});
+elements.sfmaBreakouts.addEventListener("change", event => {
+  const select = event.target.closest("[data-sfma-breakout-id]");
+  if (!select) return;
+  if (select.value) sfmaBreakoutResults[select.dataset.sfmaBreakoutId] = select.value; else delete sfmaBreakoutResults[select.dataset.sfmaBreakoutId];
   render();
 });
 elements.addRegion.addEventListener("click", () => {
@@ -618,7 +753,7 @@ elements.detail.addEventListener("click", event => {
   render();
 });
 elements.reset.addEventListener("click", () => {
-  elements.region.value = ""; elements.keyword.value = ""; selectedMovements.clear(); sfmaResults = {}; testResults = {}; render();
+  elements.region.value = ""; elements.keyword.value = ""; selectedMovements.clear(); sfmaResults = {}; sfmaBreakoutResults = {}; testResults = {}; render();
 });
 elements.openEditor.addEventListener("click", () => { refreshEditorSelect(); elements.dialog.showModal(); });
 elements.editorSelect.addEventListener("change", () => fillEditor(items.find(item => item.id === elements.editorSelect.value)));
@@ -647,7 +782,7 @@ elements.deleteItem.addEventListener("click", () => {
   const id = $("#editId").value;
   if (!id || !confirm("この候補を削除しますか？")) return;
   items = items.filter(item => item.id !== id);
-  selectedId = items[0]?.id ?? null; saveItems(); refreshEditorSelect(); render(); showToast("削除しました");
+  selectedId = items[0]?.id ?? null; saveItems(); saveClinicalState(); refreshEditorSelect(); render(); showToast("削除しました");
 });
 
 $("#exportButton").addEventListener("click", () => {
@@ -671,7 +806,7 @@ $("#importInput").addEventListener("change", async event => {
 });
 $("#restoreButton").addEventListener("click", () => {
   if (!confirm("追加・編集した内容を破棄して初期データに戻しますか？")) return;
-  items = structuredClone(seedData); customRegions = []; entityMeta = {}; selectedId = items[0].id; testResults = {}; saveItems(); saveCustomRegions(); saveEntityMeta(); refreshEditorSelect(); render(); showToast("初期データに戻しました");
+  items = structuredClone(seedData); customRegions = []; entityMeta = {}; selectedId = items[0].id; testResults = {}; selectedMovements.clear(); sfmaResults = {}; sfmaBreakoutResults = {}; saveItems(); saveCustomRegions(); saveEntityMeta(); saveClinicalState(); refreshEditorSelect(); render(); showToast("初期データに戻しました");
 });
 
 render();
