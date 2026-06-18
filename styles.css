@@ -136,6 +136,18 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(69, 126, 101
 .link-tag { border: 0; cursor: pointer; text-align: left; }
 .entity-pill { display: inline-flex; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: var(--brand-soft); }
 .entity-pill .tag { border-radius: 0; border: 0; }
+.pill-input {
+  width: min(210px, 56vw);
+  min-height: 36px;
+  border: 0;
+  border-radius: 0;
+  background: var(--brand-soft);
+  color: var(--brand);
+  padding: 5px 9px;
+  font-size: .78rem;
+  font-weight: 800;
+}
+.pill-input:focus { outline: 3px solid rgba(69, 126, 101, .22); }
 .pill-edit { min-width: 38px; border: 0; border-left: 1px solid rgba(18,55,42,.12); background: white; color: var(--brand); font-size: .75rem; font-weight: 900; }
 .pill-remove { min-width: 38px; border: 0; border-left: 1px solid rgba(18,55,42,.12); background: white; color: var(--brand); font-size: 1rem; font-weight: 900; }
 .inline-add-compact { margin-top: 9px; }
