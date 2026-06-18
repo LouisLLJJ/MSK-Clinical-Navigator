@@ -13,7 +13,7 @@
       <p class="eyebrow">鑑別・評価支援 MVP</p>
       <h1>MSK Clinical Navigator</h1>
     </div>
-    <button id="openEditorButton" class="button button-secondary" type="button">候補編集</button>
+    <button id="openEditorButton" class="button button-secondary" type="button">JSON</button>
   </header>
 
   <nav class="app-nav" aria-label="主要ページ">
@@ -66,42 +66,6 @@
       <div id="quickRegions" class="chip-row" aria-label="部位のクイック選択"></div>
     </section>
 
-    <section class="panel clinical-edit-panel" aria-labelledby="clinicalEditHeading">
-      <div class="section-heading">
-        <div>
-          <p class="step-label">EDIT HERE</p>
-          <h2 id="clinicalEditHeading">臨床画面でデータ追加・編集</h2>
-        </div>
-      </div>
-      <p class="helper">入力すると既存データ候補が出ます。選択中の候補に追加したり、その項目自体を編集できます。</p>
-      <div class="clinical-edit-grid">
-        <label>追加・編集する種類
-          <select id="clinicalEntityKind">
-            <option value="symptom|region">部位</option>
-            <option value="symptom|movement">症状・痛い動き</option>
-            <option value="symptom|keyword">症状・特徴</option>
-            <option value="anatomy|muscle">筋</option>
-            <option value="anatomy|joint">関節・組織</option>
-            <option value="anatomy|nerve">神経</option>
-            <option value="test|test">検査</option>
-            <option value="treatment|treatment">治療候補</option>
-            <option value="treatment|selfCare">セルフケア</option>
-          </select>
-        </label>
-        <label>名前
-          <input id="clinicalEntityInput" placeholder="入力すると候補が出ます" autocomplete="off">
-        </label>
-      </div>
-      <div id="clinicalEntitySuggestions" class="suggestion-row" aria-label="入力候補"></div>
-      <label id="clinicalEntityDescriptionLabel">説明・陽性所見
-        <textarea id="clinicalEntityDescription" rows="3" placeholder="検査の陽性所見や項目メモを書けます"></textarea>
-      </label>
-      <div class="clinical-edit-actions">
-        <button id="addClinicalEntityButton" class="button button-primary" type="button">選択中の候補に追加</button>
-        <button id="editClinicalEntityButton" class="button button-secondary" type="button">この項目を編集</button>
-      </div>
-    </section>
-
     <section class="panel sfma-panel" aria-labelledby="sfmaHeading">
       <div class="section-heading">
         <div>
@@ -135,37 +99,33 @@
 
     <section class="app-page" data-page-panel="symptoms">
       <div class="directory-header panel">
-        <div><p class="step-label">CONNECTED DATA</p><h2>症状・部位</h2><p>部位と症状を編集すると、候補検索と関連度へ反映されます。</p></div>
-        <button class="button button-primary" type="button" data-add-entity="symptom">新規追加</button>
+        <div><p class="step-label">CONNECTED DATA</p><h2>症状・部位</h2><p>部位と症状は候補検索と関連度へつながります。</p></div>
       </div>
-      <div class="directory-controls"><input type="search" placeholder="症状・部位を検索" data-directory-search="symptoms"></div>
+      <div class="directory-controls"><input type="search" placeholder="症状・部位を検索" data-directory-search="symptoms"><button class="button button-secondary" type="button" data-directory-add="symptom" data-directory-search-source="symptoms">追加</button></div>
       <div id="symptomsDirectory" class="directory-grid"></div>
     </section>
 
     <section class="app-page" data-page-panel="anatomy">
       <div class="directory-header panel">
         <div><p class="step-label">CONNECTED DATA</p><h2>関連解剖</h2><p>筋・関節・組織・神経と候補のつながりを一元管理します。</p></div>
-        <button class="button button-primary" type="button" data-add-entity="anatomy">新規追加</button>
       </div>
-      <div class="directory-controls"><input type="search" placeholder="解剖を検索" data-directory-search="anatomy"></div>
+      <div class="directory-controls"><input type="search" placeholder="解剖を検索" data-directory-search="anatomy"><button class="button button-secondary" type="button" data-directory-add="anatomy" data-directory-search-source="anatomy">追加</button></div>
       <div id="anatomyDirectory" class="directory-grid"></div>
     </section>
 
     <section class="app-page" data-page-panel="tests">
       <div class="directory-header panel">
-        <div><p class="step-label">CONNECTED DATA</p><h2>検査</h2><p>検査名・陽性所見・関連候補を編集できます。</p></div>
-        <button class="button button-primary" type="button" data-add-entity="test">新規追加</button>
+        <div><p class="step-label">CONNECTED DATA</p><h2>検査</h2><p>検査名・陽性所見・関連候補が臨床推論へ反映されます。</p></div>
       </div>
-      <div class="directory-controls"><input type="search" placeholder="検査を検索" data-directory-search="tests"></div>
+      <div class="directory-controls"><input type="search" placeholder="検査を検索" data-directory-search="tests"><button class="button button-secondary" type="button" data-directory-add="test" data-directory-search-source="tests">追加</button></div>
       <div id="testsDirectory" class="directory-grid"></div>
     </section>
 
     <section class="app-page" data-page-panel="treatments">
       <div class="directory-header panel">
-        <div><p class="step-label">CONNECTED DATA</p><h2>治療・セルフケア</h2><p>介入候補を編集すると、関連する全候補の表示が変わります。</p></div>
-        <button class="button button-primary" type="button" data-add-entity="treatment">新規追加</button>
+        <div><p class="step-label">CONNECTED DATA</p><h2>治療・セルフケア</h2><p>介入候補は関連する全候補の表示へつながります。</p></div>
       </div>
-      <div class="directory-controls"><input type="search" placeholder="治療・セルフケアを検索" data-directory-search="treatments"></div>
+      <div class="directory-controls"><input type="search" placeholder="治療・セルフケアを検索" data-directory-search="treatments"><button class="button button-secondary" type="button" data-directory-add="treatment" data-directory-search-source="treatments">追加</button></div>
       <div id="treatmentsDirectory" class="directory-grid"></div>
     </section>
   </main>
@@ -174,13 +134,13 @@
     <form method="dialog" class="dialog-header">
       <div>
         <p class="step-label">LOCAL DATA</p>
-        <h2>データを追加・編集</h2>
+        <h2>データ管理</h2>
       </div>
       <button class="icon-button" value="cancel" aria-label="閉じる">×</button>
     </form>
     <div class="editor-toolbar">
       <label>
-        編集する候補
+        対象データ
         <select id="editorItemSelect"></select>
       </label>
       <button id="newItemButton" class="button button-secondary" type="button">新規作成</button>
@@ -217,7 +177,7 @@
 
   <dialog id="entityDialog" class="editor-dialog entity-dialog">
     <form method="dialog" class="dialog-header">
-      <div><p class="step-label">CONNECTED DATA</p><h2 id="entityDialogTitle">データ編集</h2></div>
+      <div><p class="step-label">CONNECTED DATA</p><h2 id="entityDialogTitle">データ管理</h2></div>
       <button class="icon-button" value="cancel" aria-label="閉じる">×</button>
     </form>
     <form id="entityForm" class="editor-form">
