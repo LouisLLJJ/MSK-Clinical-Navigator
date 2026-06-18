@@ -37,7 +37,10 @@
           <p class="step-label">STEP 1</p>
           <h2 id="searchHeading">症状から探す</h2>
         </div>
-        <button id="resetButton" class="text-button" type="button">リセット</button>
+        <div class="heading-actions">
+          <span id="autosaveStatus" class="save-status">自動保存</span>
+          <button id="resetButton" class="text-button" type="button">リセット</button>
+        </div>
       </div>
 
       <div class="search-grid">
@@ -63,6 +66,42 @@
       <div id="quickRegions" class="chip-row" aria-label="部位のクイック選択"></div>
     </section>
 
+    <section class="panel clinical-edit-panel" aria-labelledby="clinicalEditHeading">
+      <div class="section-heading">
+        <div>
+          <p class="step-label">EDIT HERE</p>
+          <h2 id="clinicalEditHeading">臨床画面でデータ追加・編集</h2>
+        </div>
+      </div>
+      <p class="helper">入力すると既存データ候補が出ます。選択中の候補に追加したり、その項目自体を編集できます。</p>
+      <div class="clinical-edit-grid">
+        <label>追加・編集する種類
+          <select id="clinicalEntityKind">
+            <option value="symptom|region">部位</option>
+            <option value="symptom|movement">症状・痛い動き</option>
+            <option value="symptom|keyword">症状・特徴</option>
+            <option value="anatomy|muscle">筋</option>
+            <option value="anatomy|joint">関節・組織</option>
+            <option value="anatomy|nerve">神経</option>
+            <option value="test|test">検査</option>
+            <option value="treatment|treatment">治療候補</option>
+            <option value="treatment|selfCare">セルフケア</option>
+          </select>
+        </label>
+        <label>名前
+          <input id="clinicalEntityInput" placeholder="入力すると候補が出ます" autocomplete="off">
+        </label>
+      </div>
+      <div id="clinicalEntitySuggestions" class="suggestion-row" aria-label="入力候補"></div>
+      <label id="clinicalEntityDescriptionLabel">説明・陽性所見
+        <textarea id="clinicalEntityDescription" rows="3" placeholder="検査の陽性所見や項目メモを書けます"></textarea>
+      </label>
+      <div class="clinical-edit-actions">
+        <button id="addClinicalEntityButton" class="button button-primary" type="button">選択中の候補に追加</button>
+        <button id="editClinicalEntityButton" class="button button-secondary" type="button">この項目を編集</button>
+      </div>
+    </section>
+
     <section class="panel sfma-panel" aria-labelledby="sfmaHeading">
       <div class="section-heading">
         <div>
@@ -72,6 +111,8 @@
       </div>
       <p class="helper">FN: 機能的・疼痛なし / FP: 機能的・疼痛あり / DN: 非機能的・疼痛なし / DP: 非機能的・疼痛あり</p>
       <div id="sfmaInputs" class="sfma-grid"></div>
+      <h3 class="subsection-title">ブレイクアウト</h3>
+      <div id="sfmaBreakoutInputs" class="sfma-grid"></div>
       <p class="source-note">SFMA結果は診断名ではありません。候補の関連度には補助的な小さい重みで反映します。</p>
     </section>
 
