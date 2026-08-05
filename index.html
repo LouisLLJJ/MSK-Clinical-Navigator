@@ -35,7 +35,7 @@
       <div class="section-heading">
         <div>
           <p class="step-label">STEP 1</p>
-          <h2 id="searchHeading">症状から探す</h2>
+          <h2 id="searchHeading">部位からロジックツリーで探す</h2>
         </div>
         <div class="heading-actions">
           <span id="autosaveStatus" class="save-status">自動保存</span>
@@ -55,8 +55,8 @@
           </div>
         </div>
         <div class="field-group">
-          <span class="field-label">症状・痛い動き（複数選択）</span>
-          <div id="movementChoices" class="choice-grid" aria-label="症状と痛い動き"></div>
+          <span class="field-label">症状・痛い動き・解剖メモ</span>
+          <div id="movementChoices" class="choice-grid" aria-label="部位別ロジックツリー"></div>
         </div>
       </div>
       <label>
@@ -107,9 +107,9 @@
 
     <section class="app-page" data-page-panel="anatomy">
       <div class="directory-header panel">
-        <div><p class="step-label">CONNECTED DATA</p><h2>関連解剖</h2><p>筋・関節・組織・神経と候補のつながりを一元管理します。</p></div>
+        <div><p class="step-label">BODY ATLAS</p><h2>関連解剖</h2><p>頭から足へ、部位ごとに骨・関節・筋・神経と補足説明を整理します。</p></div>
       </div>
-      <div class="directory-controls"><input type="search" placeholder="解剖を検索" data-directory-search="anatomy"><button class="button button-secondary" type="button" data-directory-add="anatomy" data-directory-search-source="anatomy">追加</button></div>
+      <div class="directory-controls"><input type="search" placeholder="部位・骨・関節・筋・神経を検索" data-directory-search="anatomy"><button class="button button-secondary" type="button" data-directory-add="anatomy" data-directory-search-source="anatomy">部位追加</button></div>
       <div id="anatomyDirectory" class="directory-grid"></div>
     </section>
 
