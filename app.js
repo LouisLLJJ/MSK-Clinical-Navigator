@@ -2,6 +2,7 @@ const STORAGE_KEY = "msk-clinical-navigator-data-v1";
 const CUSTOM_REGIONS_KEY = "msk-clinical-navigator-custom-regions-v1";
 const ENTITY_META_KEY = "msk-clinical-navigator-entity-meta-v1";
 const CLINICAL_STATE_KEY = "msk-clinical-navigator-clinical-state-v1";
+const LOGIC_TREE_KEY = "msk-clinical-navigator-logic-tree-v1";
 const SFMA_PATTERNS = [
   { id: "cervical-flexion", label: "頸部屈曲", group: "cervical" },
   { id: "cervical-extension", label: "頸部伸展", group: "cervical" },
@@ -21,6 +22,30 @@ const SFMA_BREAKOUTS = [
   { id: "breakout-knee", label: "膝", group: "multisegmental" },
   { id: "breakout-ankle", label: "足関節", group: "multisegmental" }
 ];
+const BODY_REGION_ORDER = ["頭", "顎", "首", "肩甲骨周囲", "肩", "上腕外側", "腕", "肘", "手", "胸背部", "腰", "臀部", "股関節", "太もも", "膝", "膝前面", "膝内側", "膝外側", "下腿", "足", "足首"];
+const REGION_ATLAS = {
+  頭: { bones: ["頭蓋骨"], joints: ["顎関節"], muscles: ["後頭下筋群", "咬筋", "側頭筋"], nerves: ["三叉神経", "顔面神経"] },
+  顎: { bones: ["下顎骨", "側頭骨"], joints: ["顎関節"], muscles: ["咬筋", "側頭筋", "外側翼突筋"], nerves: ["三叉神経"] },
+  首: { bones: ["頸椎"], joints: ["椎間関節", "椎間板", "椎間孔"], muscles: ["頸部深層筋", "胸鎖乳突筋", "斜角筋", "僧帽筋上部"], nerves: ["頸神経根 C1-C8", "副神経"] },
+  肩甲骨周囲: { bones: ["肩甲骨", "鎖骨", "胸郭"], joints: ["肩甲胸郭機構", "肩鎖関節", "胸鎖関節"], muscles: ["僧帽筋", "前鋸筋", "菱形筋", "肩甲挙筋"], nerves: ["肩甲背神経", "長胸神経", "副神経"] },
+  肩: { bones: ["上腕骨", "肩甲骨", "鎖骨"], joints: ["肩甲上腕関節", "肩鎖関節", "胸鎖関節", "肩甲胸郭機構"], muscles: ["棘上筋", "棘下筋", "肩甲下筋", "小円筋", "三角筋", "上腕二頭筋長頭"], nerves: ["腋窩神経", "肩甲上神経", "筋皮神経"] },
+  上腕外側: { bones: ["上腕骨"], joints: ["肩甲上腕関節", "肘関節"], muscles: ["三角筋", "上腕三頭筋", "上腕筋"], nerves: ["腋窩神経", "橈骨神経"] },
+  腕: { bones: ["上腕骨", "橈骨", "尺骨"], joints: ["肩関節", "肘関節", "橈尺関節"], muscles: ["上腕二頭筋", "上腕三頭筋", "前腕屈筋群", "前腕伸筋群"], nerves: ["正中神経", "橈骨神経", "尺骨神経", "筋皮神経"] },
+  肘: { bones: ["上腕骨", "橈骨", "尺骨"], joints: ["腕尺関節", "腕橈関節", "上橈尺関節"], muscles: ["上腕二頭筋", "上腕筋", "上腕三頭筋", "前腕屈筋群", "前腕伸筋群"], nerves: ["正中神経", "橈骨神経", "尺骨神経"] },
+  手: { bones: ["手根骨", "中手骨", "指骨", "橈骨遠位端", "尺骨遠位端"], joints: ["手関節", "手根中手関節", "中手指節関節", "指節間関節"], muscles: ["母指球筋", "小指球筋", "虫様筋", "前腕屈筋群", "前腕伸筋群"], nerves: ["正中神経", "尺骨神経", "橈骨神経"] },
+  胸背部: { bones: ["胸椎", "肋骨", "胸骨"], joints: ["胸椎椎間関節", "肋椎関節", "胸肋関節"], muscles: ["脊柱起立筋", "多裂筋", "広背筋", "僧帽筋"], nerves: ["胸神経", "肋間神経"] },
+  腰: { bones: ["腰椎"], joints: ["椎間関節", "椎間板", "椎間孔", "仙腸関節"], muscles: ["多裂筋", "脊柱起立筋", "腰方形筋", "腸腰筋"], nerves: ["腰神経根 L1-L5", "大腿神経", "閉鎖神経"] },
+  臀部: { bones: ["寛骨", "仙骨", "大腿骨近位部"], joints: ["仙腸関節", "股関節"], muscles: ["大殿筋", "中殿筋", "梨状筋", "深層外旋六筋"], nerves: ["坐骨神経", "上殿神経", "下殿神経"] },
+  股関節: { bones: ["寛骨", "大腿骨頭", "大腿骨頸部"], joints: ["股関節", "仙腸関節"], muscles: ["腸腰筋", "大殿筋", "中殿筋", "内転筋群", "ハムストリングス"], nerves: ["大腿神経", "閉鎖神経", "坐骨神経"] },
+  太もも: { bones: ["大腿骨"], joints: ["股関節", "膝関節"], muscles: ["大腿四頭筋", "ハムストリングス", "内転筋群", "腸脛靭帯"], nerves: ["大腿神経", "坐骨神経", "閉鎖神経"] },
+  膝: { bones: ["大腿骨", "脛骨", "腓骨", "膝蓋骨"], joints: ["脛骨大腿関節", "膝蓋大腿関節", "近位脛腓関節"], muscles: ["大腿四頭筋", "ハムストリングス", "膝窩筋", "腓腹筋"], nerves: ["脛骨神経", "総腓骨神経", "伏在神経"] },
+  膝前面: { bones: ["膝蓋骨", "大腿骨", "脛骨"], joints: ["膝蓋大腿関節", "脛骨大腿関節"], muscles: ["大腿四頭筋", "膝蓋腱", "中殿筋"], nerves: ["伏在神経", "大腿神経"] },
+  膝内側: { bones: ["大腿骨内側顆", "脛骨内側顆"], joints: ["脛骨大腿関節", "内側半月板"], muscles: ["内側広筋", "半腱様筋", "薄筋", "縫工筋"], nerves: ["伏在神経", "脛骨神経"] },
+  膝外側: { bones: ["大腿骨外側顆", "脛骨外側顆", "腓骨頭"], joints: ["脛骨大腿関節", "外側半月板", "近位脛腓関節"], muscles: ["大腿二頭筋", "腸脛靭帯", "外側広筋"], nerves: ["総腓骨神経"] },
+  下腿: { bones: ["脛骨", "腓骨"], joints: ["膝関節", "足関節", "遠位脛腓関節"], muscles: ["下腿三頭筋", "前脛骨筋", "腓骨筋群", "後脛骨筋"], nerves: ["脛骨神経", "総腓骨神経", "浅腓骨神経", "深腓骨神経"] },
+  足: { bones: ["距骨", "踵骨", "舟状骨", "立方骨", "楔状骨", "中足骨", "趾骨"], joints: ["距腿関節", "距骨下関節", "足根中足関節", "中足趾節関節"], muscles: ["下腿三頭筋", "後脛骨筋", "腓骨筋群", "足内在筋"], nerves: ["脛骨神経", "浅腓骨神経", "深腓骨神経", "腓腹神経"] },
+  足首: { bones: ["脛骨遠位部", "腓骨遠位部", "距骨", "踵骨"], joints: ["距腿関節", "距骨下関節", "遠位脛腓関節"], muscles: ["下腿三頭筋", "前脛骨筋", "後脛骨筋", "腓骨筋群"], nerves: ["脛骨神経", "浅腓骨神経", "深腓骨神経", "腓腹神経"] }
+};
 
 const seedData = [
   {
@@ -148,6 +173,8 @@ let sfmaResults = clinicalState.sfmaResults || {};
 let sfmaBreakoutResults = clinicalState.sfmaBreakoutResults || {};
 let customRegions = loadCustomRegions();
 let entityMeta = loadEntityMeta();
+let logicTree = loadLogicTree();
+let autoRegionInitialized = Boolean(clinicalState.region);
 
 const $ = (selector) => document.querySelector(selector);
 const elements = {
@@ -195,9 +222,17 @@ function loadClinicalState() {
   catch { return {}; }
 }
 
+function loadLogicTree() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LOGIC_TREE_KEY));
+    return saved && typeof saved === "object" && saved.regions ? saved : { regions: {} };
+  } catch { return { regions: {} }; }
+}
+
 function saveItems() { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
 function saveCustomRegions() { localStorage.setItem(CUSTOM_REGIONS_KEY, JSON.stringify(customRegions)); }
 function saveEntityMeta() { localStorage.setItem(ENTITY_META_KEY, JSON.stringify(entityMeta)); }
+function saveLogicTree() { localStorage.setItem(LOGIC_TREE_KEY, JSON.stringify(logicTree)); }
 function saveClinicalState() {
   const state = {
     selectedId,
@@ -224,18 +259,49 @@ function unique(values) { return [...new Set(values.flat().filter(Boolean))].sor
 function splitComma(value) { return value.split(/[、,]/).map(v => v.trim()).filter(Boolean); }
 function splitLines(value) { return value.split(/\r?\n/).map(v => v.trim()).filter(Boolean); }
 function escapeHtml(value = "") { return String(value).replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char]); }
+function itemValues(item, property) { return Array.isArray(item[property]) ? item[property] : []; }
+function subtypeProperty(subtype) {
+  return { bone: "bones", region: "regions", movement: "movements", keyword: "keywords", muscle: "muscles", joint: "joints", nerve: "nerves", treatment: "treatments", selfCare: "selfCare" }[subtype];
+}
+function regionSort(a, b) {
+  const ia = BODY_REGION_ORDER.indexOf(a);
+  const ib = BODY_REGION_ORDER.indexOf(b);
+  if (ia >= 0 || ib >= 0) return (ia >= 0 ? ia : 999) - (ib >= 0 ? ib : 999);
+  return a.localeCompare(b, "ja");
+}
+function getAllRegions() { return unique([...items.map(item => item.regions), customRegions]).sort(regionSort); }
+function ensureLogicRegion(region) {
+  if (!region) return null;
+  if (!logicTree.regions[region]) logicTree.regions[region] = { nodes: [], anatomyNotes: { bone: "", joint: "", muscle: "", nerve: "", general: "" } };
+  if (!logicTree.regions[region].anatomyNotes) logicTree.regions[region].anatomyNotes = { bone: "", joint: "", muscle: "", nerve: "", general: "" };
+  if (!Array.isArray(logicTree.regions[region].nodes)) logicTree.regions[region].nodes = [];
+  return logicTree.regions[region];
+}
+function defaultLogicNodes(region) {
+  const relatedItems = items.filter(item => itemValues(item, "regions").includes(region));
+  const movements = unique(relatedItems.map(item => itemValues(item, "movements"))).map(label => ({ id: `movement:${label}`, label, type: "movement" }));
+  const keywords = unique(relatedItems.map(item => itemValues(item, "keywords"))).map(label => ({ id: `keyword:${label}`, label, type: "keyword" }));
+  return [...movements, ...keywords];
+}
+function getLogicNodes(region) {
+  const custom = ensureLogicRegion(region)?.nodes || [];
+  const map = new Map(defaultLogicNodes(region).map(node => [node.id, node]));
+  custom.forEach(node => {
+    if (node?.label) map.set(node.id || `custom:${node.label}`, { id: node.id || `custom:${node.label}`, label: node.label, type: node.type || "custom", note: node.note || "" });
+  });
+  return [...map.values()];
+}
 
 function populateFilters() {
-  const selectedRegion = elements.region.value;
-  const regions = unique([...items.map(item => item.regions), customRegions]);
-  const symptoms = unique(items.flatMap(item => [...item.movements, ...item.keywords]));
+  let selectedRegion = elements.region.value;
+  if (!selectedRegion && !autoRegionInitialized) {
+    selectedRegion = items.find(item => item.id === selectedId)?.regions?.[0] || "";
+    autoRegionInitialized = true;
+  }
+  const regions = getAllRegions();
   elements.region.innerHTML = '<option value="">部位を選択</option>' + regions.map(v => `<option>${escapeHtml(v)}</option>`).join("");
   elements.region.value = regions.includes(selectedRegion) ? selectedRegion : "";
-  elements.movementChoices.innerHTML = symptoms.map(movement => `
-    <label class="choice-item">
-      <input type="checkbox" value="${escapeHtml(movement)}" ${selectedMovements.has(movement) ? "checked" : ""}>
-      <span>${escapeHtml(movement)}</span>
-    </label>`).join("");
+  renderLogicTree();
   elements.quickRegions.innerHTML = regions.map(region => `<button class="chip ${region === elements.region.value ? "active" : ""}" type="button" data-region="${escapeHtml(region)}">${escapeHtml(region)}</button>`).join("");
   elements.sfma.innerHTML = SFMA_PATTERNS.map(pattern => `
     <label class="sfma-item">${escapeHtml(pattern.label)}
@@ -257,6 +323,43 @@ function populateFilters() {
         <option value="DP" ${sfmaBreakoutResults[pattern.id] === "DP" ? "selected" : ""}>DP</option>
       </select>
     </label>`).join("");
+}
+
+function renderLogicTree() {
+  const region = elements.region.value;
+  if (!region) {
+    elements.movementChoices.innerHTML = '<p class="source-note">痛みの部位を選ぶと、その部位の症状ツリーが表示されます。</p>';
+    return;
+  }
+  const tree = ensureLogicRegion(region);
+  const nodes = getLogicNodes(region);
+  const branches = nodes.map(node => `
+    <article class="logic-node">
+      <label class="choice-item logic-choice">
+        <input type="checkbox" value="${escapeHtml(node.label)}" ${selectedMovements.has(node.label) ? "checked" : ""}>
+        <span>${escapeHtml(node.label)}</span>
+      </label>
+      <textarea data-logic-node-note="${escapeHtml(node.id)}" rows="2" placeholder="この症状枝のメモ">${escapeHtml(node.note || "")}</textarea>
+    </article>`).join("");
+  const notes = tree.anatomyNotes || {};
+  elements.movementChoices.innerHTML = `
+    <div class="logic-tree" data-logic-region="${escapeHtml(region)}">
+      <div class="logic-root"><span class="tree-dot"></span><strong>${escapeHtml(region)}</strong><span>痛み</span></div>
+      <div class="logic-branches">${branches || '<p class="source-note">枝がまだありません。</p>'}</div>
+      <div class="logic-add-row">
+        <input data-logic-add-input placeholder="症状・痛い動き・所見を追加" list="logic-suggestions-${escapeHtml(region)}" autocomplete="off">
+        <button class="button button-secondary" type="button" data-logic-add-button>追加</button>
+        <datalist id="logic-suggestions-${escapeHtml(region)}">${unique(items.filter(item => itemValues(item, "regions").includes(region)).flatMap(item => [...itemValues(item, "movements"), ...itemValues(item, "keywords")])).map(value => `<option value="${escapeHtml(value)}"></option>`).join("")}</datalist>
+      </div>
+      <div class="logic-anatomy-notes">
+        <h3>この部位の解剖メモ</h3>
+        <label>骨<textarea data-logic-anatomy-note="bone" rows="2">${escapeHtml(notes.bone || "")}</textarea></label>
+        <label>関節<textarea data-logic-anatomy-note="joint" rows="2">${escapeHtml(notes.joint || "")}</textarea></label>
+        <label>筋<textarea data-logic-anatomy-note="muscle" rows="2">${escapeHtml(notes.muscle || "")}</textarea></label>
+        <label>神経<textarea data-logic-anatomy-note="nerve" rows="2">${escapeHtml(notes.nerve || "")}</textarea></label>
+        <label>補足<textarea data-logic-anatomy-note="general" rows="2">${escapeHtml(notes.general || "")}</textarea></label>
+      </div>
+    </div>`;
 }
 
 function getSfmaScore(item) {
@@ -290,9 +393,10 @@ function getItemEntityDescriptions(item) {
     ...item.regions.map(name => ["symptom", "region", name]),
     ...item.movements.map(name => ["symptom", "movement", name]),
     ...item.keywords.map(name => ["symptom", "keyword", name]),
-    ...item.muscles.map(name => ["anatomy", "muscle", name]),
-    ...item.joints.map(name => ["anatomy", "joint", name]),
-    ...item.nerves.map(name => ["anatomy", "nerve", name]),
+    ...itemValues(item, "bones").map(name => ["anatomy", "bone", name]),
+    ...itemValues(item, "muscles").map(name => ["anatomy", "muscle", name]),
+    ...itemValues(item, "joints").map(name => ["anatomy", "joint", name]),
+    ...itemValues(item, "nerves").map(name => ["anatomy", "nerve", name]),
     ...item.treatments.map(name => ["treatment", "treatment", name]),
     ...item.selfCare.map(name => ["treatment", "selfCare", name])
   ];
@@ -313,7 +417,7 @@ function scoreItem(item) {
     else score -= 5;
   });
   if (query) {
-    const fields = [item.name, item.summary, ...item.regions, ...item.movements, ...item.keywords, ...item.muscles, ...item.joints, ...item.nerves, getItemEntityDescriptions(item)].join(" ").toLowerCase();
+    const fields = [item.name, item.summary, ...item.regions, ...item.movements, ...item.keywords, ...itemValues(item, "bones"), ...itemValues(item, "muscles"), ...itemValues(item, "joints"), ...itemValues(item, "nerves"), getItemEntityDescriptions(item)].join(" ").toLowerCase();
     const terms = query.split(/\s+/).filter(Boolean);
     const hits = terms.filter(term => fields.includes(term));
     score += hits.length * 18;
@@ -357,7 +461,7 @@ function render() {
 
 const SUBTYPE_TO_KIND = {
   region: "symptom", movement: "symptom", keyword: "symptom",
-  muscle: "anatomy", joint: "anatomy", nerve: "anatomy",
+  bone: "anatomy", muscle: "anatomy", joint: "anatomy", nerve: "anatomy",
   test: "test", treatment: "treatment", selfCare: "treatment"
 };
 
@@ -401,7 +505,8 @@ function renderDetail(item) {
       <h3>動作・活動</h3>${renderEditableTags(item, "movements", "movement", `movement-options-${item.id}`)}
       <h3>症状・特徴</h3>${renderEditableTags(item, "keywords", "keyword", `keyword-options-${item.id}`)}
     </section>
-    <section class="detail-section"><h3>関連する筋・関節・神経</h3><div class="anatomy-grid">
+    <section class="detail-section"><h3>関連する骨・関節・筋・神経</h3><div class="anatomy-grid">
+      <div class="anatomy-box"><h3>骨</h3>${renderEditableTags(item, "bones", "bone", `bone-options-${item.id}`)}</div>
       <div class="anatomy-box"><h3>筋</h3>${renderEditableTags(item, "muscles", "muscle", `muscle-options-${item.id}`)}</div>
       <div class="anatomy-box"><h3>関節・組織</h3>${renderEditableTags(item, "joints", "joint", `joint-options-${item.id}`)}</div>
       <div class="anatomy-box"><h3>神経</h3>${renderEditableTags(item, "nerves", "nerve", `nerve-options-${item.id}`)}</div>
@@ -474,6 +579,7 @@ const ENTITY_TYPES = {
     { value: "keyword", label: "症状・特徴" }
   ],
   anatomy: [
+    { value: "bone", label: "骨" },
     { value: "muscle", label: "筋" },
     { value: "joint", label: "関節・組織" },
     { value: "nerve", label: "神経" }
@@ -504,9 +610,10 @@ function getEntityCatalog(kind) {
       item.keywords.forEach(name => add(name, "keyword", item.id));
     }
     if (kind === "anatomy") {
-      item.muscles.forEach(name => add(name, "muscle", item.id));
-      item.joints.forEach(name => add(name, "joint", item.id));
-      item.nerves.forEach(name => add(name, "nerve", item.id));
+      itemValues(item, "bones").forEach(name => add(name, "bone", item.id));
+      itemValues(item, "muscles").forEach(name => add(name, "muscle", item.id));
+      itemValues(item, "joints").forEach(name => add(name, "joint", item.id));
+      itemValues(item, "nerves").forEach(name => add(name, "nerve", item.id));
     }
     if (kind === "test") item.tests.forEach(test => add(test.name, "test", item.id, test.finding));
     if (kind === "treatment") {
@@ -559,17 +666,73 @@ function renderDirectory(kind, targetId, searchKey) {
   }).join("") : '<p class="empty panel">該当するデータがありません。</p>';
 }
 
+function anatomyLabel(subtype) {
+  return { bone: "骨", joint: "関節", muscle: "筋", nerve: "神経" }[subtype] || subtype;
+}
+
+function atlasValues(region, subtype) {
+  const tree = ensureLogicRegion(region);
+  const custom = tree.anatomyLists?.[subtype];
+  if (Array.isArray(custom) && custom.length) return custom;
+  const atlas = REGION_ATLAS[region] || {};
+  const atlasKey = { bone: "bones", joint: "joints", muscle: "muscles", nerve: "nerves" }[subtype];
+  const fromAtlas = atlas[atlasKey] || [];
+  const property = subtypeProperty(subtype);
+  const fromItems = items.filter(item => itemValues(item, "regions").includes(region)).flatMap(item => itemValues(item, property));
+  return unique([fromAtlas, fromItems]);
+}
+
+function renderAnatomyDirectory() {
+  const target = $("#anatomyDirectory");
+  if (!target) return;
+  const query = (document.querySelector('[data-directory-search="anatomy"]')?.value || "").trim().toLowerCase();
+  const regions = unique([BODY_REGION_ORDER, getAllRegions(), Object.keys(REGION_ATLAS), Object.keys(logicTree.regions || {})]).sort(regionSort);
+  const filteredRegions = regions.filter(region => {
+    const tree = ensureLogicRegion(region);
+    const haystack = [
+      region,
+      ...["bone", "joint", "muscle", "nerve"].flatMap(subtype => atlasValues(region, subtype)),
+      tree.anatomyNotes?.bone, tree.anatomyNotes?.joint, tree.anatomyNotes?.muscle, tree.anatomyNotes?.nerve, tree.anatomyNotes?.general
+    ].join(" ").toLowerCase();
+    return !query || haystack.includes(query);
+  });
+  const nav = `<div class="anatomy-region-nav">${regions.map(region => `<button class="chip" type="button" data-anatomy-jump="${escapeHtml(region)}">${escapeHtml(region)}</button>`).join("")}</div>`;
+  const sections = filteredRegions.map(region => {
+    const tree = ensureLogicRegion(region);
+    const notes = tree.anatomyNotes || {};
+    const lists = ["bone", "joint", "muscle", "nerve"].map(subtype => `
+      <label class="anatomy-list-editor">${anatomyLabel(subtype)}
+        <textarea data-region-anatomy-list="${escapeHtml(subtype)}" data-anatomy-region="${escapeHtml(region)}" rows="4">${escapeHtml(atlasValues(region, subtype).join("\n"))}</textarea>
+      </label>`).join("");
+    return `<article id="anatomy-region-${escapeHtml(region)}" class="anatomy-region-card panel" data-anatomy-region-card="${escapeHtml(region)}">
+      <div class="section-heading">
+        <div><p class="step-label">BODY REGION</p><h2>${escapeHtml(region)}</h2></div>
+      </div>
+      <div class="anatomy-category-grid">${lists}</div>
+      <div class="logic-anatomy-notes anatomy-page-notes">
+        <h3>補足説明</h3>
+        <label>骨<textarea data-logic-anatomy-note="bone" data-anatomy-region="${escapeHtml(region)}" rows="2">${escapeHtml(notes.bone || "")}</textarea></label>
+        <label>関節<textarea data-logic-anatomy-note="joint" data-anatomy-region="${escapeHtml(region)}" rows="2">${escapeHtml(notes.joint || "")}</textarea></label>
+        <label>筋<textarea data-logic-anatomy-note="muscle" data-anatomy-region="${escapeHtml(region)}" rows="2">${escapeHtml(notes.muscle || "")}</textarea></label>
+        <label>神経<textarea data-logic-anatomy-note="nerve" data-anatomy-region="${escapeHtml(region)}" rows="2">${escapeHtml(notes.nerve || "")}</textarea></label>
+        <label>全体メモ<textarea data-logic-anatomy-note="general" data-anatomy-region="${escapeHtml(region)}" rows="2">${escapeHtml(notes.general || "")}</textarea></label>
+      </div>
+    </article>`;
+  }).join("");
+  target.innerHTML = nav + (sections || '<p class="empty panel">該当する部位がありません。</p>');
+}
+
 function renderDirectories() {
   renderDirectory("symptom", "#symptomsDirectory", "symptoms");
-  renderDirectory("anatomy", "#anatomyDirectory", "anatomy");
+  renderAnatomyDirectory();
   renderDirectory("test", "#testsDirectory", "tests");
   renderDirectory("treatment", "#treatmentsDirectory", "treatments");
 }
 
 function entityHasRelation(item, subtype, name) {
   if (subtype === "test") return item.tests.some(test => test.name === name);
-  const property = { region: "regions", movement: "movements", keyword: "keywords", muscle: "muscles", joint: "joints", nerve: "nerves", treatment: "treatments", selfCare: "selfCare" }[subtype];
-  return property ? item[property].includes(name) : false;
+  const property = subtypeProperty(subtype);
+  return property ? itemValues(item, property).includes(name) : false;
 }
 
 function openEntityEditor(kind, subtype = ENTITY_TYPES[kind][0].value, name = "") {
@@ -590,7 +753,7 @@ function openEntityEditor(kind, subtype = ENTITY_TYPES[kind][0].value, name = ""
 function removeEntityReference(item, subtype, name) {
   if (!name) return;
   if (subtype === "test") { item.tests = item.tests.filter(test => test.name !== name); return; }
-  const property = { region: "regions", movement: "movements", keyword: "keywords", muscle: "muscles", joint: "joints", nerve: "nerves", treatment: "treatments", selfCare: "selfCare" }[subtype];
+  const property = subtypeProperty(subtype);
   if (property) item[property] = item[property].filter(value => value !== name);
 }
 
@@ -601,8 +764,11 @@ function addEntityReference(item, subtype, name, description) {
     else item.tests.push({ id: slugify(name), name, finding: description || "登録なし" });
     return;
   }
-  const property = { region: "regions", movement: "movements", keyword: "keywords", muscle: "muscles", joint: "joints", nerve: "nerves", treatment: "treatments", selfCare: "selfCare" }[subtype];
-  if (property && !item[property].includes(name)) item[property].push(name);
+  const property = subtypeProperty(subtype);
+  if (property) {
+    if (!Array.isArray(item[property])) item[property] = [];
+    if (!item[property].includes(name)) item[property].push(name);
+  }
 }
 
 function parseDirectoryEntity(card) {
@@ -617,7 +783,7 @@ function renameEntityEverywhere(kind, subtype, oldName, newName) {
       item.tests.forEach(test => { if (test.name === oldName) test.name = newName; });
       return;
     }
-    const property = { region: "regions", movement: "movements", keyword: "keywords", muscle: "muscles", joint: "joints", nerve: "nerves", treatment: "treatments", selfCare: "selfCare" }[subtype];
+    const property = subtypeProperty(subtype);
     if (property) item[property] = item[property].map(value => value === oldName ? newName : value);
   });
   if (subtype === "region") customRegions = customRegions.map(value => value === oldName ? newName : value);
@@ -673,6 +839,12 @@ function addDirectoryEntity(kind, searchKey) {
   const search = document.querySelector(`[data-directory-search="${searchKey}"]`);
   const name = (search?.value || "").trim();
   if (!name) return;
+  if (kind === "anatomy") {
+    ensureLogicRegion(name);
+    saveLogicTree();
+    render();
+    return;
+  }
   const subtype = ENTITY_TYPES[kind][0].value;
   entityMeta[metaKey(kind, subtype, name)] = entityMeta[metaKey(kind, subtype, name)] || { description: "" };
   if (kind === "symptom" && subtype === "region" && !customRegions.includes(name)) {
@@ -683,9 +855,46 @@ function addDirectoryEntity(kind, searchKey) {
   render();
 }
 
+function addLogicNode(region, label) {
+  const name = label.trim();
+  if (!region || !name) return;
+  const tree = ensureLogicRegion(region);
+  if (!tree.nodes.some(node => node.label === name)) {
+    tree.nodes.push({ id: `custom:${slugify(name)}`, label: name, type: "custom", note: "" });
+  }
+  saveLogicTree();
+  render();
+}
+
+function updateLogicNodeNote(region, nodeId, note) {
+  const tree = ensureLogicRegion(region);
+  let node = tree.nodes.find(entry => entry.id === nodeId);
+  if (!node) {
+    const base = defaultLogicNodes(region).find(entry => entry.id === nodeId);
+    node = { id: nodeId, label: base?.label || nodeId.replace(/^(movement|keyword|custom):/, ""), type: base?.type || "custom", note: "" };
+    tree.nodes.push(node);
+  }
+  node.note = note;
+  saveLogicTree();
+}
+
+function updateAnatomyNote(region, subtype, note) {
+  const tree = ensureLogicRegion(region);
+  tree.anatomyNotes[subtype] = note;
+  saveLogicTree();
+}
+
+function updateRegionAnatomyList(region, subtype, value) {
+  const tree = ensureLogicRegion(region);
+  if (!tree.anatomyLists) tree.anatomyLists = {};
+  tree.anatomyLists[subtype] = splitLines(value);
+  saveLogicTree();
+}
+
 function switchPage(page) {
   document.querySelectorAll("[data-page-panel]").forEach(panel => panel.classList.toggle("active", panel.dataset.pagePanel === page));
   document.querySelectorAll("[data-page]").forEach(button => button.classList.toggle("active", button.dataset.page === page));
+  renderDirectories();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -749,6 +958,7 @@ function addTokenToSelected(property, subtype, value) {
   const item = selectedItem();
   const name = value.trim();
   if (!item || !name) return false;
+  if (!Array.isArray(item[property])) item[property] = [];
   if (!item[property].includes(name)) item[property].push(name);
   if (subtype === "region" && !customRegions.includes(name) && !unique(items.map(entry => entry.regions)).includes(name)) {
     customRegions.push(name);
@@ -833,6 +1043,34 @@ elements.movementChoices.addEventListener("change", event => {
   if (input.checked) selectedMovements.add(input.value); else selectedMovements.delete(input.value);
   render();
 });
+elements.movementChoices.addEventListener("click", event => {
+  const button = event.target.closest("[data-logic-add-button]");
+  if (!button) return;
+  const region = elements.region.value;
+  const input = elements.movementChoices.querySelector("[data-logic-add-input]");
+  if (input) {
+    addLogicNode(region, input.value);
+    input.value = "";
+  }
+});
+elements.movementChoices.addEventListener("keydown", event => {
+  const input = event.target.closest("[data-logic-add-input]");
+  if (!input || event.key !== "Enter") return;
+  event.preventDefault();
+  addLogicNode(elements.region.value, input.value);
+  input.value = "";
+});
+elements.movementChoices.addEventListener("input", event => {
+  const treeRoot = event.target.closest("[data-logic-region]");
+  const region = treeRoot?.dataset.logicRegion || elements.region.value;
+  const nodeNote = event.target.closest("[data-logic-node-note]");
+  if (nodeNote) {
+    updateLogicNodeNote(region, nodeNote.dataset.logicNodeNote, nodeNote.value);
+    return;
+  }
+  const anatomyNote = event.target.closest("[data-logic-anatomy-note]");
+  if (anatomyNote) updateAnatomyNote(region, anatomyNote.dataset.logicAnatomyNote, anatomyNote.value);
+});
 elements.sfma.addEventListener("change", event => {
   const select = event.target.closest("[data-sfma-id]");
   if (!select) return;
@@ -891,6 +1129,23 @@ document.addEventListener("click", event => {
 });
 document.querySelectorAll("[data-directory-search]").forEach(input => input.addEventListener("input", renderDirectories));
 document.querySelectorAll(".directory-grid").forEach(grid => {
+  grid.addEventListener("click", event => {
+    const jump = event.target.closest("[data-anatomy-jump]");
+    if (!jump) return;
+    const target = document.getElementById(`anatomy-region-${jump.dataset.anatomyJump}`);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  grid.addEventListener("input", event => {
+    const anatomyNote = event.target.closest("[data-logic-anatomy-note][data-anatomy-region]");
+    if (anatomyNote) {
+      updateAnatomyNote(anatomyNote.dataset.anatomyRegion, anatomyNote.dataset.logicAnatomyNote, anatomyNote.value);
+      return;
+    }
+    const list = event.target.closest("[data-region-anatomy-list]");
+    if (list) updateRegionAnatomyList(list.dataset.anatomyRegion, list.dataset.regionAnatomyList, list.value);
+  });
+
   grid.addEventListener("change", event => {
     const card = event.target.closest("[data-directory-entity]");
     if (!card) return;
@@ -1164,7 +1419,7 @@ elements.deleteItem.addEventListener("click", () => {
 });
 
 $("#exportButton").addEventListener("click", () => {
-  const bundle = { version: 2, items, customRegions, entityMeta };
+  const bundle = { version: 3, items, customRegions, entityMeta, logicTree };
   const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
   const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "msk-data.json"; link.click(); URL.revokeObjectURL(link.href);
 });
@@ -1177,14 +1432,15 @@ $("#importInput").addEventListener("change", async event => {
     if (!Array.isArray(data)) {
       customRegions = Array.isArray(data.customRegions) ? data.customRegions : [];
       entityMeta = data.entityMeta && typeof data.entityMeta === "object" ? data.entityMeta : {};
+      logicTree = data.logicTree && typeof data.logicTree === "object" ? data.logicTree : { regions: {} };
     }
-    selectedId = items[0]?.id ?? null; saveItems(); saveCustomRegions(); saveEntityMeta(); refreshEditorSelect(); render(); showToast("全データを読み込みました");
+    selectedId = items[0]?.id ?? null; saveItems(); saveCustomRegions(); saveEntityMeta(); saveLogicTree(); refreshEditorSelect(); render(); showToast("全データを読み込みました");
   } catch { alert("読み込めるJSON形式ではありません。"); }
   event.target.value = "";
 });
 $("#restoreButton").addEventListener("click", () => {
   if (!confirm("追加・変更した内容を破棄して初期データに戻しますか？")) return;
-  items = structuredClone(seedData); customRegions = []; entityMeta = {}; selectedId = items[0].id; testResults = {}; selectedMovements.clear(); sfmaResults = {}; sfmaBreakoutResults = {}; saveItems(); saveCustomRegions(); saveEntityMeta(); saveClinicalState(); refreshEditorSelect(); render(); showToast("初期データに戻しました");
+  items = structuredClone(seedData); customRegions = []; entityMeta = {}; logicTree = { regions: {} }; selectedId = items[0].id; testResults = {}; selectedMovements.clear(); sfmaResults = {}; sfmaBreakoutResults = {}; saveItems(); saveCustomRegions(); saveEntityMeta(); saveLogicTree(); saveClinicalState(); refreshEditorSelect(); render(); showToast("初期データに戻しました");
 });
 
 render();
